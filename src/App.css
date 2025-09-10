@@ -1,0 +1,435 @@
+html {
+  cursor: none !important; /* Hide default cursor */
+}
+
+html * {
+  cursor: none !important;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  cursor: none !important; /* Hide default cursor */
+}
+
+body * {
+  cursor: none !important;
+}
+
+* {
+  cursor: none !important; /* Hide default cursor on all elements */
+}
+
+*:hover {
+  cursor: none !important;
+}
+
+*:focus {
+  cursor: none !important;
+}
+
+*:active {
+  cursor: none !important;
+}
+
+*:visited {
+  cursor: none !important;
+}
+
+*:link {
+  cursor: none !important;
+}
+
+/* Additional cursor hiding for specific elements */
+a, button, input, textarea, select, [role="button"], [onclick], 
+div, span, p, h1, h2, h3, h4, h5, h6, img, svg, canvas,
+section, article, header, footer, nav, main, aside {
+  cursor: none !important;
+}
+
+/* Ensure no cursor shows on hover states */
+*:hover {
+  cursor: none !important;
+}
+
+/* Hide cursor on focus states */
+*:focus {
+  cursor: none !important;
+  outline: none;
+}
+
+/* Hide cursor on active states */
+*:active {
+  cursor: none !important;
+}
+
+/* Hide cursor on visited states */
+*:visited {
+  cursor: none !important;
+}
+
+/* Hide cursor on link states */
+a:link, a:visited, a:hover, a:active {
+  cursor: none !important;
+}
+
+/* Force hide cursor on all pseudo-elements */
+*::before, *::after {
+  cursor: none !important;
+}
+
+/* Simple cursor hiding */
+html, body {
+  cursor: none !important;
+}
+
+#smooth-wrapper {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
+#smooth-content {
+  width: 100vw;
+  min-height: 200vh; /* Reduced height after removing projects */
+  position: relative;
+  background-color: #f5f5f0;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  will-change: transform;
+  overflow: visible;
+}
+
+.app {
+  width: 100vw;
+  min-height: 100vh;
+  position: relative;
+  background-color: #f5f5f0;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  will-change: transform;
+}
+
+.screen-container {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  padding: 4%;
+  box-sizing: border-box;
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  transform-style: preserve-3d;
+}
+
+
+.banner-container {
+  flex: 1;
+  width: 100%;
+  z-index: 2;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.red-banner {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to top, #000000, #FF0000);
+  transform-origin: left center;
+  margin: 0;
+  padding: 0;
+}
+
+.text-container {
+  width: 100%;
+  height: auto;
+  background-color: #f5f5f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+/* Atomic Design System - Typography Tokens */
+:root {
+  --text-xxl: 12rem;    /* Title size */
+  --text-xl: 8rem;      /* Large title size */
+  --text-l: 1.4rem;     /* Body text size */
+  --text-m: 1.2rem;     /* Small text size */
+  --text-s: 1rem;       /* Extra small text size */
+  
+  --font-family: 'Nohemi', sans-serif;
+  --font-weight-normal: 400;
+  --font-weight-bold: 800;
+  
+  --letter-spacing-tight: 0.3px;
+  --letter-spacing-normal: 0.5px;
+  --letter-spacing-wide: 4px;
+  
+  --line-height-tight: 0.9;
+  --line-height-normal: 1.2;
+}
+
+.text-content {
+  position: relative;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: auto;
+  width: 100%;
+}
+
+.text-group {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  height: auto;
+  gap: 1rem;
+}
+
+.text-title {
+  font-size: var(--text-xxl);
+  font-weight: var(--font-weight-bold);
+  color: #000;
+  letter-spacing: var(--letter-spacing-wide);
+  font-family: var(--font-family);
+  text-align: center;
+  margin: 0;
+  height: auto;
+  white-space: nowrap;
+  display: block;
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  will-change: transform;
+  transform-style: preserve-3d;
+}
+
+.text-body-left {
+  font-size: var(--text-l);
+  font-weight: var(--font-weight-normal);
+  color: #000;
+  letter-spacing: var(--letter-spacing-normal);
+  font-family: var(--font-family);
+  text-align: left;
+  margin: 0;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.text-body-right {
+  font-size: var(--text-l);
+  font-weight: var(--font-weight-normal);
+  color: #000;
+  letter-spacing: var(--letter-spacing-tight);
+  font-family: var(--font-family);
+  text-align: right;
+  margin: 0;
+  white-space: nowrap;
+  width: 100%;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  :root {
+    --text-xxl: 6rem;
+    --text-l: 1.2rem;
+  }
+  
+  .text-title {
+    font-size: clamp(3rem, 8vw, 6rem);
+    letter-spacing: clamp(1px, 2vw, 4px);
+  }
+  
+  .text-content {
+    padding: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --text-xxl: 4rem;
+    --text-l: 1rem;
+  }
+  
+  .text-title {
+    font-size: clamp(2rem, 10vw, 4rem);
+    letter-spacing: clamp(0.5px, 1.5vw, 2px);
+    padding-top: 1rem;
+  }
+  
+  .text-content {
+    padding: 0;
+  }
+}
+
+@media (max-width: 320px) {
+  .text-title {
+    font-size: clamp(1.5rem, 12vw, 3rem);
+    letter-spacing: clamp(0.5px, 1vw, 1px);
+    padding-top: 0.8rem;
+  }
+}
+
+/* Second Screen - About Section */
+.about-screen {
+  background-color: #FDF7F5;
+  padding: 4%;
+  box-sizing: border-box;
+}
+
+.about-header {
+  position: absolute;
+  top: 4%;
+  right: 4%;
+  text-align: right;
+  max-width: 60%;
+}
+
+.about-intro {
+  font-size: var(--text-l);
+  font-weight: var(--font-weight-normal);
+  color: #000;
+  font-family: var(--font-family);
+  margin-bottom: 1rem;
+  line-height: var(--line-height-normal);
+}
+
+.about-title {
+  font-size: var(--text-xl);
+  font-weight: var(--font-weight-bold);
+  color: transparent;
+  -webkit-text-stroke: 2px #000;
+  text-stroke: 2px #000;
+  font-family: var(--font-family);
+  line-height: 0.9;
+  letter-spacing: var(--letter-spacing-wide);
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.title-line {
+  display: block;
+  margin: 0;
+  padding: 0;
+  white-space: nowrap;
+}
+
+.about-content {
+  position: absolute;
+  bottom: 4%;
+  left: 4%;
+  right: 4%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  max-width: 100%;
+}
+
+.about-left,
+.about-right {
+  font-size: var(--text-l);
+  font-weight: var(--font-weight-normal);
+  color: #000;
+  font-family: var(--font-family);
+  line-height: var(--line-height-normal);
+  text-align: left;
+}
+
+.about-right strong {
+  font-weight: var(--font-weight-bold);
+}
+
+/* Responsive design for about screen */
+@media (max-width: 768px) {
+  .about-header {
+    max-width: 80%;
+  }
+  
+  .about-title {
+    font-size: clamp(3rem, 8vw, var(--text-xl));
+  }
+  
+  .about-content {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .about-header {
+    max-width: 90%;
+  }
+  
+  .about-title {
+    font-size: clamp(2rem, 10vw, 6rem);
+  }
+  
+  .about-content {
+    gap: 1rem;
+  }
+  
+  .about-left,
+  .about-right {
+    font-size: var(--text-m);
+  }
+}
+
+@media (max-width: 320px) {
+  .about-title {
+    font-size: clamp(1.5rem, 12vw, 4rem);
+  }
+}
+
+/* Custom Cursor Styles */
+.custom-cursor {
+  position: fixed;
+  width: 4px;
+  height: 4px;
+  background-color: #000;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+}
+
+.cursor-trail {
+  position: fixed;
+  width: 24px;
+  height: 24px;
+  border: 3px solid #00ff00;
+  border-radius: 50%;
+  background-color: transparent;
+  pointer-events: none;
+  z-index: 9998;
+  transform: translate(-50%, -50%);
+  transition: all 0.2s ease-out;
+}
+
+
+/* Hover effects removed */
+
+
+
