@@ -161,14 +161,25 @@ function App() {
     const name = nameRef.current;
     const tagline = taglineRef.current;
 
-    // Set initial states
-    gsap.set(loader, { scaleX: 0, transformOrigin: "left center" });
+    // Prevent scrolling during loading
+    document.body.style.overflow = 'hidden';
+
+    // Set initial full-screen state
+    gsap.set(loader, { 
+      scaleX: 0, 
+      transformOrigin: "left center",
+      width: '100vw',
+      height: '100vh',
+      top: 0,
+      left: 0,
+      position: 'fixed'
+    });
     gsap.set([hiThere, name, tagline], { opacity: 0, y: 30 });
 
     // Create counting number element positioned exactly like the title
     const counterElement = document.createElement('div');
     counterElement.style.cssText = `
-      position: absolute;
+      position: fixed;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
@@ -183,7 +194,7 @@ function App() {
       white-space: nowrap;
     `;
     counterElement.textContent = '0%';
-    textContainer.appendChild(counterElement);
+    document.body.appendChild(counterElement);
 
     // Create timeline
     const tl = gsap.timeline();
@@ -211,14 +222,34 @@ function App() {
       duration: 0.3,
       ease: "power2.out"
     }, 2.5)
+    // Shrink loader to final position - only top portion of screen
+    .to(loader, {
+      width: '100%',
+      height: '45%',
+      top: 0,
+      left: 0,
+      position: 'absolute',
+      duration: 1,
+      ease: "power2.out"
+    })
+    // Re-enable scrolling
+    .call(() => {
+      document.body.style.overflow = 'auto';
+    })
     .to([hiThere, name, tagline], {
       opacity: 1,
       y: 0,
       duration: 0.8,
       stagger: 0.2,
       ease: "power2.out"
-    }, 2.8); // Start text animation after counter is hidden
+    }, 3.5); // Start text animation after loader shrinks
 
+    return () => {
+      if (counterElement.parentNode) {
+        counterElement.parentNode.removeChild(counterElement);
+      }
+      document.body.style.overflow = 'auto';
+    };
   }, []);
 
   // About section animations
