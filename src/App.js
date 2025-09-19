@@ -32,6 +32,15 @@ try {
 
 gsap.registerPlugin(ScrollTrigger);
 
+// Try to register ScrollToPlugin
+try {
+  const { ScrollToPlugin } = require('gsap/ScrollToPlugin');
+  gsap.registerPlugin(ScrollToPlugin);
+  console.log('ScrollToPlugin registered successfully');
+} catch (e) {
+  console.log('ScrollToPlugin not available - using fallback');
+}
+
 // Morphing SVG component that contains both arrow and close paths
 function MorphingIcon({ className = '', isClose = false, filled = false, sectionName = '' }) {
   const arrowId = `arrow-${sectionName}`;
@@ -250,6 +259,8 @@ export default function App() {
       });
     }
 
+    // No magnetic scrolling for projects - static layout
+
     return () => {
       ScrollTrigger.getAll().forEach(t => t.kill());
       clearInterval(id);
@@ -448,93 +459,130 @@ export default function App() {
   const animateToDetail = (section) => {
     const masterTl = gsap.timeline();
     const rows = document.querySelectorAll('.about-title-line');
-    const selectedRow = document.querySelector(`[data-section="${section}"]`);
     const otherRows = Array.from(rows).filter(row => row.dataset.section !== section);
-    const psychologyRow = document.querySelector(`[data-section="psychology"]`);
+    const aboutDetail = document.querySelector('.about-detail');
     
-    // Calculate the exact Y position to move the selected row to where psychology is
-    let targetY = 0;
-    if (section !== 'psychology') {
-      // Get the current position of psychology row and selected row
-      const psychologyRect = psychologyRow.getBoundingClientRect();
-      const selectedRect = selectedRow.getBoundingClientRect();
+    // No need to move grid - let it stay in natural position
+    
+    // Measure the actual content height with a reasonable maximum
+    let targetDetailHeightPx = 300; // fallback
+    if (aboutDetail) {
+      // Temporarily show the content to measure its natural height
+      const originalHeight = aboutDetail.style.height;
+      const originalOpacity = aboutDetail.style.opacity;
+      const originalOverflow = aboutDetail.style.overflow;
       
-      // Calculate the difference in Y positions
-      // We want the selected row to end up where psychology currently is
-      targetY = psychologyRect.top - selectedRect.top;
+      aboutDetail.style.height = 'auto';
+      aboutDetail.style.opacity = '1';
+      aboutDetail.style.overflow = 'visible';
+      aboutDetail.style.visibility = 'visible';
+      
+      // Get the natural height
+      const naturalHeight = aboutDetail.offsetHeight;
+      console.log('Natural height:', naturalHeight);
+      
+      // Use natural height but cap it at a reasonable maximum
+      targetDetailHeightPx = Math.min(naturalHeight, 500); // Cap at 500px max
+      
+      // Restore collapsed state
+      aboutDetail.style.height = originalHeight || '0px';
+      aboutDetail.style.opacity = originalOpacity || '0';
+      aboutDetail.style.overflow = originalOverflow || 'hidden';
     }
     
+    console.log('Target height:', targetDetailHeightPx);
+    
+    // Store current scroll position to maintain it
+    const currentScrollY = window.scrollY;
+    
     masterTl
-      // Phase 1: Hide kicker and non-selected rows (including their arrows)
+      // Phase 1: Hide kicker and non-selected rows
       .to('.about-kicker', {
         opacity: 0,
         y: -20,
-        duration: 0.5,
+        duration: 0.4,
         ease: 'power2.inOut'
       })
       .to(otherRows, {
         opacity: 0,
-        y: -40,
-        duration: 0.6,
+        y: -30,
+        height: 0,
+        duration: 0.5,
         ease: 'power2.inOut',
-        stagger: 0.1,
-        onComplete: () => {
-          otherRows.forEach(row => {
-            row.style.display = 'none';
-          });
-        }
+        stagger: 0.05
       }, '<+0.1')
-      // Phase 2: Move selected row to top and collapse about-header height
-      .to(selectedRow, {
-        y: targetY, // Move to the exact position where psychology is
-        x: 0, // Force horizontal position to stay at 0
-        transformOrigin: 'right center', // Maintain right alignment
-        duration: 0.8,
-        ease: 'power3.inOut'
-      }, '<+0.2')
-      // Phase 3: Show detail content
+      .to('.about-title', {
+        gap: 0,
+        duration: 0.5,
+        ease: 'power2.inOut'
+      }, '<')
+      // Phase 2: Write-up grows in naturally
       .to('.about-detail', {
         opacity: 1,
-        y: 0,
-        duration: 0.7,
+        height: targetDetailHeightPx, // Animate to measured height
+        duration: 0.6,
         ease: 'power2.out'
-      }, '<+0.3');
+      }, '<+0.1')
+      // Phase 3: Smooth scroll to about section using GSAP
+      .to(window, {
+        scrollTo: { y: currentScrollY, autoKill: false },
+        duration: 0.8,
+        ease: 'power2.out'
+      }, '<'); // Start at same time as detail expansion
   };
 
   const animateToDefault = () => {
     const masterTl = gsap.timeline();
     const rows = document.querySelectorAll('.about-title-line');
+    const aboutDetail = document.querySelector('.about-detail');
     
+    // Store current scroll position to maintain it
+    const currentScrollY = window.scrollY;
+    
+    // Ensure we have a numeric height to animate down from; if height is 'auto', set it to current pixel height first
+    if (aboutDetail) {
+      const computed = window.getComputedStyle(aboutDetail).height;
+      if (computed === 'auto' || computed === '' || computed === null) {
+        const currentPx = aboutDetail.scrollHeight;
+        aboutDetail.style.height = currentPx + 'px';
+      }
+    }
+
     masterTl
-      // Phase 1: Hide detail content
+      // Phase 1: Shrink detail content naturally
       .to('.about-detail', {
         opacity: 0,
-        y: 30,
-        duration: 0.5,
-        ease: 'power2.in'
+        height: 0,
+        duration: 0.8, // Longer duration for smooth shrinking
+        ease: 'power2.out' // Fast at beginning, slow at end
       })
-      // Phase 2: Reset all rows to original positions and restore about-header height
+      // Phase 2: Smooth scroll using GSAP
+      .to(window, {
+        scrollTo: { y: currentScrollY, autoKill: false },
+        duration: 0.8,
+        ease: 'power2.out'
+      }, '<') // Start at same time as detail shrinking
+      // Phase 3: Restore rows and spacing
       .to(rows, {
         y: 0,
-        x: 0, // Force horizontal position to stay at 0
-        transformOrigin: 'right center', // Maintain right alignment
         opacity: 1,
-        duration: 0.8,
-        ease: 'power3.out',
-        stagger: 0.05,
-        onStart: () => {
-          rows.forEach(row => {
-            row.style.display = '';
-          });
-        }
-      }, '<+0.2')
-      // Phase 3: Show kicker text
+        height: 'auto',
+        duration: 0.6,
+        ease: 'power2.out',
+        stagger: 0.03
+      }, '<+0.1')
+      .to('.about-title', {
+        gap: 'clamp(8px, 1.8vw, 14px)',
+        duration: 0.6,
+        ease: 'power2.out'
+      }, '<')
+      // Phase 3: Show kicker
       .to('.about-kicker', {
         opacity: 1,
         y: 0,
-        duration: 0.6,
+        duration: 0.5,
         ease: 'power2.out'
-      }, '<+0.3');
+      }, '<+0.2');
   };
 
   const toggleDebugMode = () => {
@@ -646,6 +694,56 @@ export default function App() {
             <div className="about-col-left">I take full ownership of my work—from initial problem identification to final implementation. Whether I'm debugging code at 2 AM or redesigning a flow for the fifth time, I'm driven by creating products that genuinely improve how people work and think.</div>
             <div className="about-col-right"><span className="about-strong">What I bring:</span> <span className="about-caption">Deep problem-solving, cross-functional execution, and the rare ability to think simultaneously as a user, designer, developer, and business owner.</span></div>
           </div>
+        </div>
+      </section>
+
+      {/* Main Projects Section with Magnetic Scrolling */}
+      <section className="main-projects">
+        <div className="main-projects-header">
+          <h2 className="main-projects-title">MY MAIN PROJECTS</h2>
+        </div>
+        <div className="projects-container">
+          <div className="projects-track">
+            <div className="project-card red-project">
+              <div className="project-rectangle"></div>
+              <div className="project-info">
+                <h3 className="project-title">Cognixa: Building Alone, Building User-First</h3>
+                <p className="project-subtitle">From Psychology to Product, A UX first approach into Systems Thinking and Data-Driven Decision Making</p>
+              </div>
+            </div>
+            
+            <div className="project-card green-project">
+              <div className="project-rectangle"></div>
+              <div className="project-info">
+                <h3 className="project-title">Settlin : Designing with a product mindset</h3>
+                <p className="project-subtitle">My learnings that helped me think in systems and wholistic ecosystem rather than free standing domains</p>
+              </div>
+            </div>
+            
+            <div className="project-card blue-project">
+              <div className="project-rectangle"></div>
+              <div className="project-info">
+                <h3 className="project-title">Settlin : Designing with a product mindset</h3>
+                <p className="project-subtitle">My learnings that helped me think in systems and wholistic ecosystem rather than free standing domains</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Mini Projects Section */}
+      <section className="mini-projects">
+        <div className="mini-projects-content">
+          <h2>Mini Projects</h2>
+          <p>Small experiments and quick builds...</p>
+        </div>
+      </section>
+
+      {/* Contact Me Section */}
+      <section className="contact">
+        <div className="contact-content">
+          <h2>Contact Me</h2>
+          <p>Let's work together...</p>
         </div>
       </section>
 
