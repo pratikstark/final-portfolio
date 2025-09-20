@@ -1,10 +1,31 @@
+/* Lenis smooth scroll CSS for optimal performance */
+html.lenis {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis.lenis-scrolling iframe {
+  pointer-events: none;
+}
+
 /* Hide default cursor */
 html, body, * {
   cursor: none !important;
 }
 
 html {
-  height: auto; /* Allow html to grow with content */
+  height: 100%; /* Ensure html takes full height */
   min-height: 100vh;
 }
 
@@ -12,13 +33,24 @@ body {
   margin: 0;
   padding: 0;
   overflow-x: hidden;
+  height: 100%; /* Ensure body takes full height */
   min-height: 100vh;
-  height: auto; /* Allow body to grow with content */
 }
 
 /* Page background */
 body {
   background-color: #f5f5f0;
+}
+
+/* Ensure smooth-wrapper doesn't interfere with viewport height */
+#smooth-wrapper {
+  height: 100%;
+  min-height: 100vh;
+}
+
+#smooth-content {
+  height: auto; /* Allow content to grow */
+  min-height: 100vh;
 }
 
 /* Loading Screen */
@@ -45,8 +77,14 @@ body {
   text-align: center;
 }
 
-/* Hero wrapper (pinned) */
-.hero { position: relative; height: 100vh; }
+/* Hero wrapper (pinned) - Ensure full viewport height */
+.hero { 
+  position: relative; 
+  height: 100vh; 
+  min-height: 100vh; /* Ensure minimum viewport height */
+  width: 100vw; /* Ensure full viewport width */
+  overflow: hidden; /* Prevent content overflow */
+}
 
 /* Video container (full screen -> banner) */
 .video-container {
@@ -83,6 +121,8 @@ body {
   box-sizing: border-box;
   transform: translateY(100%); /* start fully below viewport */
   will-change: transform;
+  min-height: 200px; /* Ensure minimum height for content */
+  max-height: 50vh; /* Prevent content from taking too much space */
 }
 .content-text h1 { 
   margin: 0; 
@@ -235,12 +275,12 @@ body {
   }
 }
 
-/* Debug Toggle Button */
+/* Debug Toggle Button - Always on top */
 .debug-toggle {
   position: fixed;
   bottom: 20px;
   right: 20px;
-  z-index: 10000;
+  z-index: 99999; /* Highest z-index to stay above everything */
   background: #000;
   color: #fff;
   border: 2px solid #fff;
@@ -252,6 +292,7 @@ body {
   font-weight: bold;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   transition: all 0.3s ease;
+  pointer-events: auto; /* Ensure it's clickable */
 }
 
 .debug-toggle:hover {
@@ -269,6 +310,40 @@ body {
 .debug-off * {
   border: none !important;
   box-sizing: border-box !important;
+}
+
+/* Show invisible container when debug is ON */
+.mini-projects-viewport-container {
+  border: 6px solid #000000; /* Black border - always visible */
+  background: transparent; /* Invisible background */
+}
+
+/* When debug is OFF, hide the invisible container completely */
+.debug-off .mini-projects-viewport-container {
+  border: none !important;
+  background: transparent !important;
+}
+
+/* Additional visual indicator when debug is ON - make container more visible */
+.mini-projects-viewport-container:not(.debug-off) {
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1); /* Subtle shadow to define the area */
+}
+
+/* Hover background colors for the fixed container */
+.mini-projects-viewport-container.hover-purple {
+  background-color: rgba(139, 92, 246, 0.1); /* Purple with opacity */
+}
+
+.mini-projects-viewport-container.hover-orange {
+  background-color: rgba(249, 115, 22, 0.1); /* Orange with opacity */
+}
+
+.mini-projects-viewport-container.hover-teal {
+  background-color: rgba(20, 184, 166, 0.1); /* Teal with opacity */
+}
+
+.mini-projects-viewport-container.hover-yellow {
+  background-color: rgba(234, 179, 8, 0.1); /* Yellow with opacity */
 }
 
 /* Spacer after hero to allow natural scrolling */
@@ -684,21 +759,33 @@ body {
   width: 100%;
   height: 100%;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   position: relative;
   border: 4px solid #ffff00; /* YELLOW border for container */
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .projects-track {
-  display: flex;
-  align-items: center;
-  gap: 100px;
-  will-change: transform;
+  width: 100%;
+  position: relative;
   border: 4px solid #ff00ff; /* MAGENTA border for track */
   box-sizing: border-box;
+  overflow: hidden; /* Hide overflow since GSAP handles the movement */
+  padding: 40px 0;
+}
+
+.projects-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 50px; /* Reduced from 100px to 50px (50% reduction) */
+  will-change: transform;
+  border: 4px solid #00ff00; /* GREEN border for wrapper */
+  box-sizing: border-box;
   padding: 10px;
+  width: max-content;
+  margin: 0 auto;
 }
 
 .project-card {
@@ -712,8 +799,8 @@ body {
 }
 
 .project-rectangle {
-  width: 300px;
-  height: 200px;
+  width: 500px;
+  height: 250px; /* 2:1 aspect ratio (500/250 = 2:1) */
   border: 2px solid #000000; /* BLACK border for rectangles */
   box-sizing: border-box;
 }
@@ -735,7 +822,7 @@ body {
 
 .project-info {
   text-align: center;
-  max-width: 300px;
+  max-width: 500px;
   margin-top: 20px;
   border: 2px solid #800080; /* PURPLE border for project info */
   box-sizing: border-box;
@@ -792,33 +879,179 @@ body {
   }
 }
 
-/* Mini Projects Section */
+/* Mini Projects Section - Horizontal Scrolling with Invisible Container */
 .mini-projects {
   width: 100vw;
   height: 100vh;
-  background-color: #e6f3ff; /* Light blue background */
+  background-color: #f5f5f0;
+  position: relative;
+  overflow: hidden;
+  border: 5px solid #ff00ff; /* MAGENTA border for mini projects section */
+  box-sizing: border-box;
+}
+
+.mini-projects-header {
+  position: absolute;
+  top: 40px;
+  left: 40px;
+  z-index: 10;
+  border: 4px solid #ffff00; /* YELLOW border for mini header */
+  box-sizing: border-box;
+  padding: 10px;
+}
+
+.mini-projects-title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #111;
+  margin: 0;
+  letter-spacing: 2px;
+  border: 3px solid #00ff80; /* LIME border for mini title */
+  box-sizing: border-box;
+  padding: 5px;
+}
+
+.mini-projects-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  border: 4px solid #8000ff; /* PURPLE border for container */
+  box-sizing: border-box;
+}
+
+/* This is the invisible viewport container - the "black rectangle" reference */
+.mini-projects-viewport-container {
+  position: fixed; /* Fixed position - doesn't move with scroll */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%); /* Center it perfectly */
+  width: 80vw; /* Smaller width for better visual */
+  height: 60vh; /* Smaller height for better visual */
+  border: 6px solid #000000; /* BLACK border - this is the invisible container reference */
+  box-sizing: border-box;
+  background: transparent; /* Invisible background */
+  overflow: hidden;
+  z-index: 5; /* Above the scrolling content */
+  pointer-events: none; /* Don't interfere with scrolling */
+  transition: background-color 0.3s ease; /* Smooth color transition */
+}
+
+.mini-projects-track {
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   position: relative;
+  border: 3px solid #ff8000; /* ORANGE border for track */
+  box-sizing: border-box;
 }
 
-.mini-projects-content {
+.mini-projects-wrapper {
+  display: flex;
+  gap: 80px; /* Spacing between mini project cards */
+  align-items: center;
+  height: 100%;
+  border: 3px solid #8080ff; /* LIGHT BLUE border for wrapper */
+  box-sizing: border-box;
+  padding: 0 100px; /* Padding to ensure cards can be centered */
+}
+
+.mini-project-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  border: 3px solid #ff4080; /* PINK border for each mini project card */
+  box-sizing: border-box;
+  padding: 10px;
+  flex-shrink: 0; /* Prevent cards from shrinking */
+}
+
+.mini-project-rectangle {
+  width: 350px;
+  height: 200px; /* 1.75:1 aspect ratio - slightly different from main projects */
+  border: 2px solid #000000; /* BLACK border for mini rectangles */
+  box-sizing: border-box;
+  border-radius: 8px; /* Slightly rounded corners for mini projects */
+}
+
+/* Mini Project Color Variants */
+.purple-project .mini-project-rectangle {
+  background-color: #8B5CF6;
+  border: 3px solid #5B21B6; /* DARK PURPLE border */
+}
+
+.orange-project .mini-project-rectangle {
+  background-color: #F97316;
+  border: 3px solid #C2410C; /* DARK ORANGE border */
+}
+
+.teal-project .mini-project-rectangle {
+  background-color: #14B8A6;
+  border: 3px solid #0F766E; /* DARK TEAL border */
+}
+
+.yellow-project .mini-project-rectangle {
+  background-color: #EAB308;
+  border: 3px solid #A16207; /* DARK YELLOW border */
+}
+
+.mini-project-info {
   text-align: center;
-  color: #333;
+  max-width: 350px;
+  margin-top: 15px;
+  border: 2px solid #4080ff; /* BLUE border for mini project info */
+  box-sizing: border-box;
+  padding: 5px;
 }
 
-.mini-projects-content h2 {
-  font-size: clamp(2rem, 5vw, 4rem);
+.mini-project-title {
+  font-size: 16px;
   font-weight: 700;
-  margin-bottom: 1rem;
-  color: #2c2c2c;
+  color: #111;
+  margin: 0 0 6px 0;
+  line-height: 1.2;
+  border: 2px solid #ff4040; /* RED border for mini title */
+  box-sizing: border-box;
+  padding: 3px;
 }
 
-.mini-projects-content p {
-  font-size: clamp(1rem, 2.5vw, 1.5rem);
+.mini-project-subtitle {
+  font-size: 14px;
   color: #666;
-  font-weight: 300;
+  margin: 0;
+  line-height: 1.3;
+  font-weight: 400;
+  border: 2px solid #40ff40; /* GREEN border for mini subtitle */
+  box-sizing: border-box;
+  padding: 3px;
+}
+
+/* Responsive Design for Mini Projects */
+@media (max-width: 768px) {
+  .mini-projects-header {
+    top: 20px;
+    left: 20px;
+  }
+
+  .mini-projects-title {
+    font-size: 1.5rem;
+  }
+  
+  .mini-projects-wrapper {
+    gap: 40px;
+    padding: 0 50px;
+  }
+  
+  .mini-project-rectangle {
+    width: clamp(200px, 60vw, 280px);
+    height: clamp(120px, 18vh, 180px);
+  }
+  
+  .mini-project-info {
+    max-width: clamp(200px, 60vw, 280px);
+  }
 }
 
 /* Contact Me Section */

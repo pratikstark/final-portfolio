@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { ScrollSmoother } from 'gsap/ScrollSmoother';
 import './App.css';
 
 // Try to register MorphSVGPlugin
@@ -21,16 +22,8 @@ try {
   console.log('DrawSVGPlugin not available - using fallback');
 }
 
-// Try to register ScrollSmoother
-try {
-  const { ScrollSmoother } = require('gsap/ScrollSmoother');
-  gsap.registerPlugin(ScrollSmoother);
-  console.log('ScrollSmoother registered successfully');
-} catch (e) {
-  console.log('ScrollSmoother not available - using fallback');
-}
-
-gsap.registerPlugin(ScrollTrigger);
+// Register GSAP plugins
+gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
 
 // Try to register ScrollToPlugin
 try {
@@ -151,14 +144,17 @@ export default function App() {
   const contentTextRef = useRef(null);
   const [activeSection, setActiveSection] = useState(null);
   const [debugMode, setDebugMode] = useState(false);
+  const [scrollPosition, setScrollPosition] = useState(0);
   const aboutHeaderRef = useRef(null);
   const aboutTitleRef = useRef(null);
   const aboutDetailRef = useRef(null);
   const activeSectionRef = useRef(null);
 
   useEffect(() => {
-    // Reset scroll position on reload
-    window.scrollTo(0, 0);
+    // Don't force scroll reset - let user stay where they were
+    
+    // Disable scrolling initially only during loader
+    document.body.style.overflow = 'hidden';
     
     const loader = loaderRef.current;
     const percentEl = percentRef.current;
@@ -168,21 +164,71 @@ export default function App() {
     const id = setInterval(() => {
       value += 1;
       if (percentEl) percentEl.textContent = `${value}%`;
-      if (value >= 100) {
+        if (value >= 100) {
         clearInterval(id);
         if (loader) loader.style.display = 'none';
         video?.play().catch(() => {});
         
-        // Initialize ScrollSmoother after loader is complete
-        if (gsap.plugins.scrollSmoother) {
-          console.log('Initializing ScrollSmoother');
-          ScrollSmoother.create({
-            smooth: 1,
-            effects: true,
-          });
-        } else {
-          console.log('ScrollSmoother not available - using native scroll');
-        }
+        // Re-enable scrolling after loader finishes
+        document.body.style.overflow = 'auto';
+        
+        // Initialize GSAP ScrollSmoother with scroll control
+        const smoother = ScrollSmoother.create({
+          wrapper: "#smooth-wrapper",
+          content: "#smooth-content",
+          smooth: 1.5, // Higher smoothness for bouncy feel
+          effects: true, // Enable effects for better performance
+          normalizeScroll: true, // Normalize scroll across devices
+          ignoreMobileResize: true, // Better mobile performance
+          smoothTouch: 0.3, // Moderate touch sensitivity for smooth feel
+          ease: "power2.out", // Bouncy easing for smooth feel
+          // Normal sensitivity settings for proper scrolling
+          wheelMultiplier: 1, // Normal wheel sensitivity
+          touchMultiplier: 1, // Normal touch sensitivity
+          // Disable auto-scroll behaviors that might cause random scrolling
+          autoResize: false, // Prevent automatic resizing that might trigger scroll
+          preventDefault: false, // Allow natural scroll behavior
+        });
+        
+        // Keep ScrollSmoother enabled but control hero section
+        
+        console.log('GSAP ScrollSmoother initialized');
+        console.log('ScrollSmoother instance:', smoother);
+        console.log('Content height:', document.getElementById('smooth-content')?.scrollHeight);
+        
+        // Store smoother instance for cleanup
+        window.scrollSmoother = smoother;
+        
+        // Add scroll position tracking with debugging
+        const updateScrollPosition = () => {
+          try {
+            if (window.scrollSmoother && typeof window.scrollSmoother.scrollTop === 'function') {
+              const scroll = window.scrollSmoother.scrollTop();
+              setScrollPosition(Math.round(scroll));
+              
+              // Debug: Log if scroll position suddenly jumps to 0
+              if (Math.round(scroll) === 0 && Math.round(scroll) !== scrollPosition) {
+                console.warn('Scroll jumped to top! Previous position:', scrollPosition, 'New position:', Math.round(scroll));
+              }
+            } else {
+              setScrollPosition(Math.round(window.scrollY));
+              
+              // Debug: Log if scroll position suddenly jumps to 0
+              if (Math.round(window.scrollY) === 0 && Math.round(window.scrollY) !== scrollPosition) {
+                console.warn('Scroll jumped to top! Previous position:', scrollPosition, 'New position:', Math.round(window.scrollY));
+              }
+            }
+          } catch (error) {
+            // Fallback to window.scrollY if ScrollSmoother fails
+            setScrollPosition(Math.round(window.scrollY));
+          }
+        };
+        
+        // Update scroll position on scroll
+        window.addEventListener('scroll', updateScrollPosition);
+        
+        // Store the function for cleanup
+        window.updateScrollPosition = updateScrollPosition;
       }
     }, 30);
 
@@ -204,19 +250,25 @@ export default function App() {
       });
     };
 
-    // Create a pinned hero section timeline that releases to normal scroll
+    // Create a pinned hero section timeline that advances exactly one step per gesture
     const tl = gsap.timeline({
       scrollTrigger: {
         trigger: '.hero',
         start: 'top top',
-        end: '+=120vh',
-        scrub: 0.8,
+        end: '+=50vh', // Very short distance - only first transition
+        scrub: 2, // High scrub to consume scroll momentum
         pin: true,
-        snap: {
-          snapTo: [0, 1],
-          duration: 0.9,
-          ease: 'power3.inOut'
-        },
+        anticipatePin: 1,
+        // Disable snap to prevent random scrolling to top
+        // snap: {
+        //   snapTo: [0, 1], // Two discrete states: fullscreen video, video + text
+        //   duration: { min: 0.3, max: 0.6 }, // Much shorter duration to reduce forced snapping
+        //   delay: 0.2, // Longer delay to allow user intention
+        //   ease: 'power2.out',
+        //   directional: false, // Allow bidirectional snapping
+        //   inertia: true, // Allow natural momentum
+        //   snapSpacing: 0.8 // Much larger spacing to reduce snap frequency
+        // },
         onUpdate: debugElements
       }
     });
@@ -228,13 +280,15 @@ export default function App() {
       height: 'calc(100vh - 5vh)', // Fill remaining space above text
       top: '5vh',
       left: '5vw',
-      ease: 'power3.inOut'
+      ease: 'power2.inOut', // Smooth easing
+      duration: 1 // Moderate duration for smooth transition
     })
     .to(
       contentTextRef.current,
       { 
         transform: 'translateY(0%)', // bring blue container to bottom of viewport
-        ease: 'power3.inOut'
+        ease: 'power2.inOut', // Smooth easing
+        duration: 1 // Moderate duration for smooth transition
       },
       '<'
     );
@@ -259,11 +313,251 @@ export default function App() {
       });
     }
 
-    // No magnetic scrolling for projects - static layout
+    // Remove aggressive scroll consumption - let natural scrolling work
+    // The ScrollTrigger snap will handle the hero transition naturally
+
+    // Set up progressive magnetic scrolling for projects
+    const setupProgressiveProjectsScrolling = () => {
+      const projectsSection = document.querySelector('.main-projects');
+      const projectsWrapper = document.querySelector('.projects-wrapper');
+      const cards = Array.from(document.querySelectorAll('.project-card'));
+      const miniProjectsSection = document.querySelector('.mini-projects');
+
+      if (!projectsSection || !projectsWrapper || cards.length < 3) return;
+
+      const measureRequiredX = (cardIndex) => {
+        const target = cards[cardIndex];
+        if (!target) return 0;
+        const prevTransform = projectsWrapper.style.transform;
+        // Temporarily remove transform to get raw positions
+        projectsWrapper.style.transform = 'none';
+        const targetRect = target.getBoundingClientRect();
+        const viewportCenterX = window.innerWidth / 2;
+        const requiredX = viewportCenterX - (targetRect.left + targetRect.width / 2);
+        // Restore previous transform
+        projectsWrapper.style.transform = prevTransform;
+        return requiredX;
+      };
+
+      const applyScrollLogic = () => {
+        const cardPositions = [
+          measureRequiredX(0), // First card centered
+          measureRequiredX(1), // Second card centered  
+          measureRequiredX(2)  // Third card centered
+        ];
+        
+        gsap.set(projectsWrapper, { x: cardPositions[0] });
+
+        // Kill previous triggers for idempotency
+        ScrollTrigger.getAll().forEach(t => {
+          if (t.vars && (t.vars.id === 'projects-scroll' || t.vars.id?.includes('project-'))) {
+            t.kill();
+          }
+        });
+
+        // Initialize all cards as visible with same scale - no blur effects
+        gsap.set(cards, { 
+          opacity: 1, 
+          scale: 1,
+          filter: 'blur(0px)'
+        });
+
+        // Main projects pin with MAGNETIC directional snapping
+        ScrollTrigger.create({
+          id: 'projects-scroll',
+          trigger: projectsSection,
+          start: 'top top',
+          end: '+=800vh', // Longer distance for magnetic snapping
+          pin: true,
+          scrub: 0.5, // Moderate scrub for smooth response
+          anticipatePin: 1,
+          // Disable snap to prevent random scrolling issues
+          // snap: {
+          //   snapTo: [0, 0.5, 1], // Three discrete snap points
+          //   duration: {min: 0.4, max: 0.8}, // Shorter duration to be less forced
+          //   delay: 0.3, // Longer delay to respect user intention
+          //   ease: 'power2.out',
+          //   directional: false, // Allow bidirectional movement
+          //   inertia: true, // Allow natural momentum
+          //   snapSpacing: 0.6, // Much larger spacing to reduce snap frequency
+          // },
+          onUpdate: (self) => {
+            const progress = self.progress;
+            let targetX;
+            
+            // MAGNETIC snapping - snaps to nearest project based on direction
+            if (progress < 0.25) {
+              // First project centered - magnetic to first
+              targetX = cardPositions[0];
+            } else if (progress < 0.75) {
+              // Second project centered - magnetic to second
+              targetX = cardPositions[1];
+            } else {
+              // Third project centered - magnetic to third
+              targetX = cardPositions[2];
+            }
+            
+            // Smooth magnetic positioning
+            gsap.to(projectsWrapper, {
+              x: targetX,
+              duration: 0.3,
+              ease: "power2.out"
+            });
+          }
+        });
+
+        // ScrollSmoother handles all smooth scrolling natively
+        // No additional magnetic hints or transitions needed
+      };
+
+      // Initial apply and on resize
+      applyScrollLogic();
+      window.addEventListener('resize', applyScrollLogic);
+
+      // Clean up listener on teardown of effect
+      return () => window.removeEventListener('resize', applyScrollLogic);
+    };
+
+    // Set up progressive scrolling for both main and mini projects
+    const setupMiniProjectsScrolling = () => {
+      const miniProjectsSection = document.querySelector('.mini-projects');
+      const miniProjectsWrapper = document.querySelector('.mini-projects-wrapper');
+      const miniCards = Array.from(document.querySelectorAll('.mini-project-card'));
+
+      if (!miniProjectsSection || !miniProjectsWrapper || miniCards.length < 3) return;
+
+      const measureRequiredX = (cardIndex) => {
+        const target = miniCards[cardIndex];
+        if (!target) return 0;
+        const prevTransform = miniProjectsWrapper.style.transform;
+        // Temporarily remove transform to get raw positions
+        miniProjectsWrapper.style.transform = 'none';
+        const targetRect = target.getBoundingClientRect();
+        const viewportCenterX = window.innerWidth / 2;
+        const requiredX = viewportCenterX - (targetRect.left + targetRect.width / 2);
+        // Restore previous transform
+        miniProjectsWrapper.style.transform = prevTransform;
+        return requiredX;
+      };
+
+      const applyMiniScrollLogic = () => {
+        const cardPositions = [
+          measureRequiredX(0), // First mini card centered
+          measureRequiredX(1), // Second mini card centered  
+          measureRequiredX(2), // Third mini card centered
+          measureRequiredX(3)  // Fourth mini card centered (if exists)
+        ];
+        
+        gsap.set(miniProjectsWrapper, { x: cardPositions[0] });
+
+        // Kill previous mini project triggers for idempotency
+        ScrollTrigger.getAll().forEach(t => {
+          if (t.vars && (t.vars.id === 'mini-projects-scroll' || t.vars.id?.includes('mini-project-'))) {
+            t.kill();
+          }
+        });
+
+        // Initialize all mini cards as visible with same scale
+        gsap.set(miniCards, { 
+          opacity: 1, 
+          scale: 1,
+          filter: 'blur(0px)'
+        });
+
+        // Mini projects pin with MAGNETIC directional snapping
+        ScrollTrigger.create({
+          id: 'mini-projects-scroll',
+          trigger: miniProjectsSection,
+          start: 'top top',
+          end: '+=600vh', // Longer distance for magnetic snapping through all cards
+          pin: true,
+          scrub: 0.5, // Moderate scrub for smooth response
+          anticipatePin: 1,
+          // Disable snap to prevent random scrolling issues
+          // snap: {
+          //   snapTo: [0, 0.33, 0.66, 1], // Four discrete snap points for 4 cards
+          //   duration: {min: 0.4, max: 0.8}, // Shorter duration to be less forced
+          //   delay: 0.3, // Longer delay to respect user intention
+          //   ease: 'power2.out',
+          //   directional: false, // Allow bidirectional movement
+          //   inertia: true, // Allow natural momentum
+          //   snapSpacing: 0.6, // Much larger spacing to reduce snap frequency
+          // },
+          onUpdate: (self) => {
+            const progress = self.progress;
+            let targetX;
+            let activeCardIndex = 0;
+            
+            // MAGNETIC snapping - snaps to nearest mini project based on direction
+            if (progress < 0.2) {
+              // First mini project centered - magnetic to first
+              targetX = cardPositions[0];
+              activeCardIndex = 0;
+            } else if (progress < 0.5) {
+              // Second mini project centered - magnetic to second
+              targetX = cardPositions[1];
+              activeCardIndex = 1;
+            } else if (progress < 0.8) {
+              // Third mini project centered - magnetic to third
+              targetX = cardPositions[2];
+              activeCardIndex = 2;
+            } else {
+              // Fourth mini project centered - magnetic to fourth
+              targetX = cardPositions[3] || cardPositions[2]; // Fallback to third if no fourth
+              activeCardIndex = 3;
+            }
+            
+            // Update container background based on centered project
+            const container = document.querySelector('.mini-projects-viewport-container');
+            if (container) {
+              // Remove all hover classes
+              container.classList.remove('hover-purple', 'hover-orange', 'hover-teal', 'hover-yellow');
+              
+              // Add appropriate hover class based on active card
+              const colorClasses = ['hover-purple', 'hover-orange', 'hover-teal', 'hover-yellow'];
+              if (colorClasses[activeCardIndex]) {
+                container.classList.add(colorClasses[activeCardIndex]);
+              }
+            }
+            
+            // Smooth magnetic positioning
+            gsap.to(miniProjectsWrapper, {
+              x: targetX,
+              duration: 0.3,
+              ease: "power2.out"
+            });
+          }
+        });
+      };
+
+      // Initial apply and on resize
+      applyMiniScrollLogic();
+      window.addEventListener('resize', applyMiniScrollLogic);
+
+      // Clean up listener on teardown of effect
+      return () => window.removeEventListener('resize', applyMiniScrollLogic);
+    };
+
+    // Setup progressive projects scrolling after a brief delay to ensure DOM is ready
+    setTimeout(setupProgressiveProjectsScrolling, 100);
+    setTimeout(setupMiniProjectsScrolling, 150); // Slight delay after main projects
 
     return () => {
       ScrollTrigger.getAll().forEach(t => t.kill());
       clearInterval(id);
+      // Clean up ScrollSmoother instance
+      if (window.scrollSmoother) {
+        window.scrollSmoother.kill();
+        window.scrollSmoother = null;
+      }
+      // Re-enable scrolling on cleanup
+      document.body.style.overflow = '';
+      // Remove scroll position tracking
+      if (window.updateScrollPosition) {
+        window.removeEventListener('scroll', window.updateScrollPosition);
+        delete window.updateScrollPosition;
+      }
+      // Hero scroll listeners already cleaned up in natural scroll flow
     };
   }, []);
 
@@ -523,12 +817,7 @@ export default function App() {
         duration: 0.6,
         ease: 'power2.out'
       }, '<+0.1')
-      // Phase 3: Smooth scroll to about section using GSAP
-      .to(window, {
-        scrollTo: { y: currentScrollY, autoKill: false },
-        duration: 0.8,
-        ease: 'power2.out'
-      }, '<'); // Start at same time as detail expansion
+      // ScrollSmoother handles scroll position naturally
   };
 
   const animateToDefault = () => {
@@ -556,12 +845,7 @@ export default function App() {
         duration: 0.8, // Longer duration for smooth shrinking
         ease: 'power2.out' // Fast at beginning, slow at end
       })
-      // Phase 2: Smooth scroll using GSAP
-      .to(window, {
-        scrollTo: { y: currentScrollY, autoKill: false },
-        duration: 0.8,
-        ease: 'power2.out'
-      }, '<') // Start at same time as detail shrinking
+      // ScrollSmoother handles scroll momentum naturally
       // Phase 3: Restore rows and spacing
       .to(rows, {
         y: 0,
@@ -611,25 +895,45 @@ export default function App() {
   };
 
   return (
-    <div className={debugMode ? '' : 'debug-off'}>
-      <div className="loader" ref={loaderRef}>
-        <div className="loader-percentage" ref={percentRef}>0%</div>
+    <>
+      {/* Scroll Position Debug Counter - Outside smooth-wrapper */}
+      <div style={{
+        position: 'fixed',
+        top: '20px',
+        left: '20px',
+        background: 'rgba(0, 0, 0, 0.8)',
+        color: 'white',
+        padding: '10px 15px',
+        borderRadius: '5px',
+        fontFamily: 'monospace',
+        fontSize: '14px',
+        zIndex: 9999,
+        pointerEvents: 'none'
+      }}>
+        Scroll: {scrollPosition}px
       </div>
-
-      {/* Pinned hero that transitions, then releases to normal scroll */}
-      <section className="hero">
-        <div className="video-container" ref={videoContainerRef}>
-          <video ref={videoRef} src="/video.mp4" autoPlay muted playsInline />
-        </div>
-        
-        <div className="content-text" ref={contentTextRef}>
-          <div>
-            <h1>Hi there,</h1>
-            <h2>I'M PRATIK</h2>
-            <p>and I create digital experiences</p>
+      
+      <div id="smooth-wrapper">
+        <div id="smooth-content">
+          <div className={debugMode ? '' : 'debug-off'}>
+            <div className="loader" ref={loaderRef}>
+            <div className="loader-percentage" ref={percentRef}>0%</div>
           </div>
+
+          {/* Pinned hero that transitions, then releases to normal scroll */}
+          <section className="hero">
+            <div className="video-container" ref={videoContainerRef}>
+              <video ref={videoRef} src="/video.mp4" autoPlay muted playsInline />
+            </div>
+            
+            <div className="content-text" ref={contentTextRef}>
+              <div>
+                <h1>Hi there,</h1>
+                <h2>I'M PRATIK</h2>
+                <p>and I create digital experiences</p>
               </div>
-      </section>
+            </div>
+          </section>
 
       {/* About / Next Screen Wireframe */}
       <section className="about">
@@ -704,38 +1008,79 @@ export default function App() {
         </div>
         <div className="projects-container">
           <div className="projects-track">
-            <div className="project-card red-project">
-              <div className="project-rectangle"></div>
-              <div className="project-info">
-                <h3 className="project-title">Cognixa: Building Alone, Building User-First</h3>
-                <p className="project-subtitle">From Psychology to Product, A UX first approach into Systems Thinking and Data-Driven Decision Making</p>
+            <div className="projects-wrapper">
+              <div className="project-card red-project">
+                <div className="project-rectangle"></div>
+                <div className="project-info">
+                  <h3 className="project-title">Cognixa: Building Alone, Building User-First</h3>
+                  <p className="project-subtitle">From Psychology to Product, A UX first approach into Systems Thinking and Data-Driven Decision Making</p>
+                </div>
               </div>
-            </div>
-            
-            <div className="project-card green-project">
-              <div className="project-rectangle"></div>
-              <div className="project-info">
-                <h3 className="project-title">Settlin : Designing with a product mindset</h3>
-                <p className="project-subtitle">My learnings that helped me think in systems and wholistic ecosystem rather than free standing domains</p>
+              
+              <div className="project-card green-project">
+                <div className="project-rectangle"></div>
+                <div className="project-info">
+                  <h3 className="project-title">Settlin : Designing with a product mindset</h3>
+                  <p className="project-subtitle">My learnings that helped me think in systems and wholistic ecosystem rather than free standing domains</p>
+                </div>
               </div>
-            </div>
-            
-            <div className="project-card blue-project">
-              <div className="project-rectangle"></div>
-              <div className="project-info">
-                <h3 className="project-title">Settlin : Designing with a product mindset</h3>
-                <p className="project-subtitle">My learnings that helped me think in systems and wholistic ecosystem rather than free standing domains</p>
+              
+              <div className="project-card blue-project">
+                <div className="project-rectangle"></div>
+                <div className="project-info">
+                  <h3 className="project-title">Settlin : Designing with a product mindset</h3>
+                  <p className="project-subtitle">My learnings that helped me think in systems and wholistic ecosystem rather than free standing domains</p>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Mini Projects Section */}
+      {/* Mini Projects Section with Horizontal Scrolling */}
       <section className="mini-projects">
-        <div className="mini-projects-content">
-          <h2>Mini Projects</h2>
-          <p>Small experiments and quick builds...</p>
+        <div className="mini-projects-header">
+          <h2 className="mini-projects-title">MINI PROJECTS</h2>
+        </div>
+        <div className="mini-projects-container">
+          {/* Invisible viewport container - this is the black rectangle reference */}
+          <div className="mini-projects-viewport-container">
+            <div className="mini-projects-track">
+              <div className="mini-projects-wrapper">
+                <div className="mini-project-card purple-project">
+                  <div className="mini-project-rectangle"></div>
+                  <div className="mini-project-info">
+                    <h3 className="mini-project-title">Quick Study: Animation Library</h3>
+                    <p className="mini-project-subtitle">Exploring motion design principles through code</p>
+                  </div>
+                </div>
+                
+                <div className="mini-project-card orange-project">
+                  <div className="mini-project-rectangle"></div>
+                  <div className="mini-project-info">
+                    <h3 className="mini-project-title">Data Visualization Tool</h3>
+                    <p className="mini-project-subtitle">Interactive charts for complex datasets</p>
+                  </div>
+                </div>
+                
+                <div className="mini-project-card teal-project">
+                  <div className="mini-project-rectangle"></div>
+                  <div className="mini-project-info">
+                    <h3 className="mini-project-title">Mobile App Prototype</h3>
+                    <p className="mini-project-subtitle">Rapid prototyping with React Native</p>
+                  </div>
+                </div>
+                
+                <div className="mini-project-card yellow-project">
+                  <div className="mini-project-rectangle"></div>
+                  <div className="mini-project-info">
+                    <h3 className="mini-project-title">AI Chat Interface</h3>
+                    <p className="mini-project-subtitle">Conversational UI experiments</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -747,13 +1092,17 @@ export default function App() {
         </div>
       </section>
 
-      {/* Debug Toggle Button */}
-      <button 
-        className={`debug-toggle ${debugMode ? 'active' : ''}`}
-        onClick={toggleDebugMode}
-      >
-        {debugMode ? 'Show Debug' : 'Hide Debug'}
-      </button>
+        </div>
+      </div>
     </div>
+    
+    {/* Debug Toggle Button - Outside smooth-wrapper to stay visible */}
+    <button 
+      className={`debug-toggle ${debugMode ? 'active' : ''}`}
+      onClick={toggleDebugMode}
+    >
+      {debugMode ? 'Show Debug' : 'Hide Debug'}
+    </button>
+    </>
   );
 }
