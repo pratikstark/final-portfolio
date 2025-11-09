@@ -67,6 +67,64 @@ body {
   background-color: #f5f5f0;
 }
 
+/* Global scrollbar styling */
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track {
+  background-color: transparent;
+  margin: 0; /* Eliminate gaps at top/bottom */
+  border: none; /* No borders that create visual gaps */
+  box-shadow: none; /* Remove inset shadows that can look like gaps */
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  width: 5px;
+  height: 5px; /* Ensure thumb spans full thickness */
+  background-color: transparent;
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb {
+  background-color: #000000;
+  border-radius: 0; /* No rounded corners */
+  border: none; /* Ensure no inner gap introduced by borders */
+  box-shadow: none;
+}
+
+/* Remove any inner spacing on WebKit tracks and corners */
+html::-webkit-scrollbar-track-piece,
+body::-webkit-scrollbar-track-piece,
+*::-webkit-scrollbar-track-piece {
+  background-color: transparent;
+  margin: 0; /* Ensure thumb sits flush to the edge */
+  border: none;
+}
+
+html::-webkit-scrollbar-corner,
+body::-webkit-scrollbar-corner,
+*::-webkit-scrollbar-corner {
+  background-color: transparent; /* No corner block */
+}
+
+/* Remove WebKit scrollbar buttons to prevent extra spacing */
+html::-webkit-scrollbar-button,
+body::-webkit-scrollbar-button,
+*::-webkit-scrollbar-button {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+/* Firefox scrollbar (track transparent) */
+html, body {
+  scrollbar-width: thin; /* Similar to 5px */
+  scrollbar-color: #000000 transparent; /* thumb | track */
+  scrollbar-gutter: auto; /* Avoid reserving extra gutter space */
+}
+
 /* Unified background for all sections */
 .hero, .about, .main-projects, .mini-projects, .contact {
   background-color: #f5f5f0;
@@ -141,23 +199,28 @@ body {
   min-height: 100vh; /* Ensure minimum viewport height */
   width: 100vw; /* Ensure full viewport width */
   overflow: hidden; /* Prevent content overflow */
+  box-sizing: border-box;
 }
 
 /* Video container (full screen -> dynamic height) */
 .video-container {
   position: absolute;
   top: 0;
-  left: 0;
-  width: 100vw;
+  left: clamp(12px, 2.5vw, 32px);
+  right: clamp(12px, 2.5vw, 32px);
+  width: calc(100vw - clamp(24px, 5vw, 64px));
   height: 100vh;
   z-index: 1;
   box-sizing: border-box;
   will-change: transform, width, height, top, left;
+  overflow: hidden; /* Prevent video from overflowing container */
 }
 .video-container video {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* Content text (below video banner) */
@@ -169,15 +232,15 @@ body {
   height: auto; /* Hug content height */
   display: grid;
   place-items: center;
-  padding: 48px 20px; /* Desktop padding */
+  padding: 24px 20px clamp(12px, 2.5vw, 32px) 20px; /* Top: 24px, bottom: clamp(12px, 2.5vw, 32px) to match video top margin */
   text-align: center;
   z-index: 2;
   background-color: #f5f5f0;
   box-sizing: border-box;
   transform: translateY(100%); /* start fully below viewport */
   will-change: transform;
-  min-height: 200px; /* Ensure minimum height for content */
-  max-height: 40vh; /* Reduced to give more space to video */
+  min-height: 35vh; /* Ensure minimum height for content */
+  max-height: 35vh; /* 30% taller than previous 40vh */
 }
 
 .text-content {
@@ -321,7 +384,7 @@ body {
   font-family: var(--font-body);
   font-size: var(--text-lg);
   font-weight: var(--font-weight-normal);
-  line-height: var(--line-height-relaxed);
+  line-height: 1.2;
   letter-spacing: var(--letter-spacing-normal);
   color: var(--color-text-primary);
 }
@@ -408,7 +471,7 @@ body {
   background-color: #000;
   border-radius: 50%;
   pointer-events: none;
-  z-index: 9999;
+  z-index: 10000 !important; /* Ensure cursor is always on top */
   transform: translate(-50%, -50%);
   filter: invert(1);
   mix-blend-mode: difference;
@@ -422,23 +485,124 @@ body {
   border-radius: 50%;
   background-color: transparent;
   pointer-events: none;
-  z-index: 9998;
+  z-index: 9999 !important; /* Ensure trail is always visible */
   transform: translate(-50%, -50%);
   transition: all 0.2s ease-out;
   filter: invert(1);
   mix-blend-mode: difference;
 }
 
+/* Ensure cursor trail is visible in dark mode */
+.main-projects.dark-mode ~ .custom-cursor,
+.main-projects.dark-mode ~ .cursor-trail,
+body:has(.main-projects.dark-mode) .custom-cursor,
+body:has(.main-projects.dark-mode) .cursor-trail {
+  z-index: 10000 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: block !important;
+}
+
+/* Ensure cursor and trail are always visible regardless of parent elements */
+.custom-cursor,
+.cursor-trail {
+  z-index: 10000 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: block !important;
+}
+
+/* Ensure cursor trail is visible on dark backgrounds - white/inverted in dark mode */
+body:has(.main-projects.dark-mode) .cursor-trail {
+  border-color: #ffffff !important;
+  background-color: transparent !important; /* No glass background */
+  mix-blend-mode: normal !important; /* Override difference mode for visibility on dark backgrounds */
+  filter: none !important; /* Remove invert filter in dark mode */
+}
+
+body:has(.main-projects.dark-mode) .custom-cursor {
+  background-color: #ffffff !important;
+  mix-blend-mode: normal !important; /* Override difference mode for visibility on dark backgrounds */
+  filter: none !important; /* Remove invert filter in dark mode */
+}
+
+/* Also apply to magnetic states in dark mode */
+body:has(.main-projects.dark-mode) .cursor-trail.magnetic-rectangle,
+body:has(.main-projects.dark-mode) .cursor-trail.magnetic-square {
+  border-color: #ffffff !important;
+  filter: none !important;
+}
+
+/* Magnetic cursor trail states for projects */
+.cursor-trail.magnetic-rectangle {
+  width: 540px; /* Covers entire project card width */
+  height: 380px; /* Covers entire project card height including text */
+  border-radius: 0;
+  border-width: 2px;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.cursor-trail.magnetic-square {
+  width: 220px; /* 200px + 20px padding */
+  height: 320px; /* 200px square + 20px margin + ~100px for text */
+  border-radius: 0;
+  border-width: 2px;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* About title hover rectangular border (long and small) */
+.cursor-trail.about-rect {
+  /* Width/height will be set dynamically to match hovered text bounds */
+  border-radius: 0; /* sharp edges */
+  border-width: 2px;
+  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Floating cursor label pill */
+.cursor-label {
+  position: fixed;
+  top: 0;
+  left: 0;
+  transform: translate(-50%, calc(-100% - 10px));
+  background: #000;
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 0; /* sharp edges */
+  font-size: 12px;
+  line-height: 1;
+  font-family: var(--font-body);
+  pointer-events: none;
+  z-index: 10000;
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  white-space: nowrap;
+}
+.cursor-label.visible {
+  opacity: 1;
+}
+
+/* Responsive magnetic cursor trail */
+@media (max-width: 768px) {
+  .cursor-trail.magnetic-rectangle {
+    width: clamp(220px, 70vw, 320px);
+    height: clamp(200px, 25vh, 280px);
+  }
+  
+  .cursor-trail.magnetic-square {
+    width: clamp(180px, 50vw, 220px);
+    height: clamp(200px, 25vh, 280px);
+  }
+}
+
 /* Responsive Breakpoints */
 @media (max-width: 1024px) {
   .content-text { 
-    padding: 40px 18px; 
+    padding: 20px 18px clamp(12px, 2.5vw, 32px) 18px; /* Bottom padding matches video top margin */
   }
 }
 @media (max-width: 768px) {
   .content-text { 
-    padding: 20px 10px; /* Mobile padding as requested */
-    /* Remove top: 55vh - use bottom: 0 for all screen sizes */
+    padding: 10px clamp(12px, 2.5vw, 32px) 10px 10px; /* Top: 10px, bottom: clamp(12px, 2.5vw, 32px), left/right: 10px */
   }
   .text-group {
     gap: 20px; /* Slightly smaller gap on mobile */
@@ -458,64 +622,36 @@ body {
 .mini-projects-viewport-container {
   border: none;
   box-shadow: none;
-  background: #ffffff; /* Pure white by default */
-}
-
-/* Hover background colors for the fixed container - deep saturated colors */
-.mini-projects-viewport-container.hover-red {
-  background-color: #dc2626; /* Deep red */
-}
-
-.mini-projects-viewport-container.hover-green {
-  background-color: #16a34a; /* Deep green */
-}
-
-.mini-projects-viewport-container.hover-blue {
-  background-color: #2563eb; /* Deep blue */
-}
-
-.mini-projects-viewport-container.hover-purple {
-  background-color: #7c3aed; /* Deep purple */
-}
-
-.mini-projects-viewport-container.hover-orange {
-  background-color: #ea580c; /* Deep orange */
-}
-
-.mini-projects-viewport-container.hover-teal {
-  background-color: #0d9488; /* Deep teal */
-}
-
-.mini-projects-viewport-container.hover-yellow {
-  background-color: #ca8a04; /* Deep yellow */
+  background: transparent !important; /* Invisible/transparent */
 }
 
 /* Spacer after hero to allow natural scrolling */
 /* About Section Wireframe */
 .about {
   position: relative;
-  height: auto; /* Allow height to grow with content */
+  min-height: 100vh; /* One viewport height to avoid excessive space */
   background: #f5f5f0; /* Unified background */
   box-sizing: border-box;
+  overflow: visible; /* Don't crop content */
 }
 
 .about-inner {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: clamp(24px, 5vw, 64px) clamp(24px, 5vw, 64px) clamp(24px, 5vw, 64px) clamp(24px, 5vw, 64px); /* Restore bottom padding */
-
+  width: calc(100vw - clamp(24px, 5vw, 64px));
+  margin-left: clamp(12px, 2.5vw, 32px);
+  margin-right: clamp(12px, 2.5vw, 32px);
+  will-change: transform;
   box-sizing: border-box;
-  min-height: fit-content; /* Minimum height to fit content */
-  height: auto; /* Allow height to grow with content */
-  display: flex;
+  min-height: 80vh; /* At least full viewport height */
+  height: auto; /* Grow as needed when details expand */
+  display: flex; /* Vertical distribution */
   flex-direction: column;
-  position: relative; /* Ensure proper positioning context */
+  justify-content: space-between; /* Topmost titles, bottommost grid */
 }
 
 .about-header { 
   display: grid; 
   justify-items: end; 
-
+  width: 100%;
   box-sizing: border-box;
 }
 
@@ -528,7 +664,7 @@ body {
 }
 .about-title { 
   display: grid; 
-  gap: clamp(8px, 1.8vw, 14px); 
+  gap: 0; /* no gap now that arrows are removed */ 
   text-align: right; 
 
   box-sizing: border-box;
@@ -537,7 +673,7 @@ body {
   display: flex; 
   align-items: center; 
   justify-content: flex-end; 
-  gap: clamp(8px, 1.2vw, 16px);
+  gap: 0;
   font-size: clamp(44px, 8.5vw, 100px); /* tad smaller */
   font-weight: 800; 
   -webkit-text-stroke: 2px #111; 
@@ -652,6 +788,32 @@ body {
   clip-path: inset(0% 0% 0% 0%);
 }
 
+/* Contact section hover effects - use about section classes */
+.about-title-line:hover .category-svg .svg-fill {
+  clip-path: inset(0% 0% 0% 0%);
+}
+
+.about-title-line:hover .category-svg img.svg-fill {
+  opacity: 1;
+}
+
+.about-title-line:hover .fill-clip {
+  clip-path: inset(0% 0% 0% 0%);
+}
+
+/* Active state for contact options */
+.about-title-line.active .category-svg .svg-fill {
+  clip-path: inset(0% 0% 0% 0%);
+}
+
+.about-title-line.active .category-svg img.svg-fill {
+  opacity: 1;
+}
+
+.about-title-line.active .fill-clip {
+  clip-path: inset(0% 0% 0% 0%);
+}
+
 .about-grid { 
   display: grid; 
   grid-template-columns: 1fr 1fr; 
@@ -662,6 +824,7 @@ body {
   padding-bottom: clamp(24px, 4vw, 48px); /* Keep bottom padding */
   padding-left: 0; /* No left padding */
   padding-right: 0; /* No right padding */
+  margin-top: auto; /* Push to bottom within flex container */
 
   box-sizing: border-box;
   will-change: transform;
@@ -678,7 +841,8 @@ body {
   overflow-wrap: break-word;
   hyphens: auto;
   max-width: 100%;
-  padding: clamp(8px, 1.5vw, 16px);
+  padding-top: clamp(8px, 1.5vw, 16px);
+  padding-bottom: clamp(8px, 1.5vw, 16px);
 }
 .about-strong { 
   font-weight: 700; 
@@ -702,7 +866,7 @@ body {
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
 }
 
 .category-svg svg {
@@ -730,7 +894,66 @@ body {
   box-sizing: border-box;
 }
 
-/* About title line container adjustments */
+/* Debugging lines for padding visualization - only visible in debug mode */
+body.debug-mode {
+  position: relative;
+}
+
+body.debug-mode::before,
+body.debug-mode::after {
+  content: '';
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* Vertical red lines */
+body.debug-mode::before {
+  left: clamp(12px, 2.5vw, 32px);
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: red;
+}
+
+/* Right vertical line and horizontal lines use a wrapper div instead */
+body.debug-mode::after {
+  right: clamp(12px, 2.5vw, 32px);
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: red;
+}
+
+/* PNG image styles for contact icons - positioned to the left */
+.category-svg img {
+  width: auto;
+  height: 100%;
+  object-fit: contain;
+  box-sizing: border-box;
+  transition: filter 0.05s ease;
+  display: block;
+}
+
+.category-svg {
+  position: relative;
+}
+
+.category-svg img.svg-stroke {
+  position: absolute;
+  opacity: 1;
+  transition: opacity 0.3s ease-out;
+  z-index: 1;
+}
+
+.category-svg img.svg-fill {
+  position: absolute;
+  opacity: 0;
+  transition: opacity 0.3s ease-out;
+  z-index: 2;
+}
+
+/* About title line container adjustments - ensure proper spacing */
 .about-title-line {
   font-size: clamp(40px, 9vw, 100px);
   font-weight: 800;
@@ -738,19 +961,20 @@ body {
   margin: 0;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-end; /* Right align content */
   gap: clamp(10px, 2vw, 20px);
   cursor: pointer;
   position: relative;
-  height: auto; /* Adapt to content height */
-  white-space: nowrap; /* Prevent text wrapping */
-  padding: 0; /* Remove any padding */
+  height: auto;
+  white-space: nowrap;
+  padding: 0;
+  width: 100%; /* Ensure full width */
 }
 
 /* Detail section for clicked categories */
 .about-detail {
   opacity: 0;
-
+  width: 100%;
   box-sizing: border-box;
   will-change: opacity, height;
   position: relative;
@@ -771,6 +995,7 @@ body {
   padding: 0; /* Remove padding to eliminate space */
   height: 100%;
   background: #fff;
+  width: 100%;
 }
 
 .detail-left {
@@ -781,7 +1006,7 @@ body {
   aspect-ratio: 1;
   border-radius: 8px;
   padding: clamp(20px, 4vw, 40px);
-
+  width: 100%;
   box-sizing: border-box;
 }
 
@@ -827,7 +1052,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: clamp(12px, 2vw, 24px);
-
+  width: 100%;
   box-sizing: border-box;
 }
 
@@ -873,18 +1098,94 @@ body {
   background-color: #f5f5f0;
   position: relative;
   overflow: hidden;
+  transition: background-color 0.3s ease;
 
   box-sizing: border-box;
+}
+
+.main-projects.dark-mode {
+  background-color: #111111;
+  transition: background-color 0.3s ease;
+}
+
+.main-projects.dark-mode .main-projects-title {
+  color: #ffffff;
+}
+
+.main-projects.dark-mode .work-summary-title {
+  color: #ffffff;
+}
+
+.main-projects.dark-mode .work-summary-list li {
+  color: #ffffff;
+}
+
+.main-projects.dark-mode .project-title {
+  color: #ffffff;
+}
+
+.main-projects.dark-mode .project-subtitle {
+  color: #cccccc;
+}
+
+.light-rays-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.aurora-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0; /* Behind thumbnails */
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.aurora-wrapper.aurora-staggered {
+  opacity: 1;
+  animation: auroraFadeIn 0.6s ease-out forwards;
+}
+
+@keyframes auroraFadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Mini Projects Dark Mode - only inside the container */
+.mini-projects-viewport-container.dark-mode {
+  background-color: #000000 !important; /* Black when hovered */
+  transition: background-color 0.4s ease;
+}
+
+.mini-projects-viewport-container.dark-mode .mini-project-title {
+  color: #ffffff;
+}
+
+.mini-projects-viewport-container.dark-mode .mini-project-subtitle {
+  color: #cccccc;
 }
 
 .main-projects-header {
   position: absolute;
   top: 40px;
-  left: 40px;
+  left: clamp(12px, 2.5vw, 32px);
   z-index: 10;
 
   box-sizing: border-box;
-  padding: 10px;
 }
 
 .main-projects-title {
@@ -895,9 +1196,85 @@ body {
   margin: 0;
   letter-spacing: var(--letter-spacing-tight);
   line-height: var(--line-height-tight);
-
   box-sizing: border-box;
-  padding: 5px;
+}
+
+.work-summary {
+  position: absolute;
+  top: clamp(140px, 18vh, 200px);
+  left: clamp(12px, 2.5vw, 32px);
+  right: clamp(12px, 2.5vw, 32px);
+  width: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(24px, 4vw, 48px);
+  padding: 0;
+  z-index: 5;
+  box-sizing: border-box;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.work-summary.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.work-summary-col {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  pointer-events: auto;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+.work-summary-title {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin: 0 0 clamp(8px, 1.5vw, 12px) 0;
+  letter-spacing: var(--letter-spacing-normal);
+  line-height: var(--line-height-normal);
+  text-transform: uppercase;
+  box-sizing: border-box;
+}
+
+.work-summary-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(6px, 1vw, 10px);
+  box-sizing: border-box;
+}
+
+.work-summary-list li {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-normal);
+  color: var(--color-text-primary);
+  line-height: var(--line-height-normal);
+  position: relative;
+  padding-left: clamp(16px, 2.5vw, 20px);
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  hyphens: auto;
+}
+
+.work-summary-list li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
 }
 
 .projects-container {
@@ -936,32 +1313,188 @@ body {
 .project-card {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start; /* Left align instead of center */
   position: relative;
   text-decoration: none;
   color: inherit;
 
   box-sizing: border-box;
-  padding: 10px;
+  padding: 0px;
   z-index: 10; /* Higher z-index to ensure hover works */
   cursor: pointer; /* Show it's interactive */
-  transition: transform 0.3s ease;
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+  will-change: transform, opacity;
 }
 
-.project-card:hover {
-  transform: translateY(-5px);
+.project-card-link {
+  text-decoration: none;
+  color: inherit;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.project-tooltip {
+  position: absolute;
+  bottom: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: var(--font-body);
+  white-space: nowrap;
+  z-index: 1000;
+  pointer-events: none;
+  opacity: 0;
+  animation: tooltipFadeIn 0.2s ease forwards;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.project-tooltip::after {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 5px solid rgba(0, 0, 0, 0.9);
+}
+
+/* Hover effect - only when not in dark mode */
+.main-projects:not(.dark-mode) .project-card:hover {
+  transform: translateY(-5px) scale(1);
+}
+
+.project-card.hovered {
+  z-index: 15;
+  transform: translateY(0) scale(1.02);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Hide non-hovered projects when a project is hovered in dark mode (but not during horizontal scrolling) - only centered projects can be hovered */
+.main-projects.dark-mode .projects-container .projects-track .projects-wrapper .project-card:not(.hovered):not(.scrolling):not(.centered),
+.main-projects.dark-mode .projects-container .projects-track .projects-wrapper .project-card.red-project:not(.hovered):not(.scrolling):not(.centered),
+.main-projects.dark-mode .projects-container .projects-track .projects-wrapper .project-card.green-project:not(.hovered):not(.scrolling):not(.centered),
+.main-projects.dark-mode .projects-container .projects-track .projects-wrapper .project-card.blue-project:not(.hovered):not(.scrolling):not(.centered) {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(20px) scale(0.95) !important;
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  will-change: transform, opacity;
+}
+
+/* During horizontal scrolling, allow JavaScript to control opacity for active project only */
+.project-card.scrolling {
+  pointer-events: none !important; /* Non-hoverable during scrolling */
+  transform: translateY(0) scale(1) !important;
+  transition: transform 0.15s ease, opacity 0.15s ease !important;
+}
+
+/* When centered (at snap point), show centered project */
+.project-card.centered {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translateY(0) scale(1) !important;
+}
+
+/* Show non-centered projects at 30% opacity when one is centered (not during scrolling) - not hoverable */
+.projects-wrapper:has(.project-card.centered) .project-card:not(.centered):not(.scrolling) {
+  opacity: 0.3 !important;
+  pointer-events: none !important; /* Not hoverable when at 30% opacity */
+  transform: translateY(0) scale(1) !important;
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Only centered project should be hoverable - even in dark mode - multiple selectors for reliability */
+.projects-wrapper:has(.project-card.centered) .project-card.centered,
+.main-projects .projects-container .projects-track .projects-wrapper:has(.project-card.centered) .project-card.centered,
+.main-projects.dark-mode .projects-container .projects-track .projects-wrapper:has(.project-card.centered) .project-card.centered {
+  pointer-events: auto !important;
+}
+
+/* Ensure non-centered projects are never hoverable, even in dark mode - multiple selectors for reliability */
+.projects-wrapper:has(.project-card.centered) .project-card:not(.centered),
+.projects-wrapper:has(.project-card.centered) .project-card:not(.centered):not(.scrolling),
+.main-projects .projects-container .projects-track .projects-wrapper:has(.project-card.centered) .project-card:not(.centered),
+.main-projects.dark-mode .projects-container .projects-track .projects-wrapper:has(.project-card.centered) .project-card:not(.centered) {
+  pointer-events: none !important;
 }
 
 .project-rectangle {
   width: 500px;
   height: 250px; /* 2:1 aspect ratio (500/250 = 2:1) */
+  margin-bottom: 0; /* Remove any default margin */
 
   box-sizing: border-box;
 }
 
 .red-project .project-rectangle {
-  background-color: #ff0000;
+  background-color: transparent;
+  position: relative;
+  overflow: hidden;
+  /* Optimize for GPU acceleration */
+  transform: translateZ(0);
+  will-change: contents;
+}
 
+.red-project .project-rectangle .project-thumbnail {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Use GPU-accelerated properties for smooth performance */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  /* Optimize rendering - only hint will-change when needed */
+  pointer-events: none;
+  /* Prevent layout shifts */
+  display: block;
+}
+
+.red-project .project-rectangle .project-thumbnail-base {
+  opacity: 1;
+  transition: opacity 0.2s ease-out;
+  z-index: 1;
+}
+
+.red-project .project-rectangle .project-thumbnail-hover {
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+  z-index: 2;
+}
+
+/* When hovered, show hover image and hide base image */
+.red-project.hovered .project-rectangle .project-thumbnail-base {
+  opacity: 0 !important;
+}
+
+.red-project.hovered .project-rectangle .project-thumbnail-hover {
+  opacity: 1 !important;
 }
 
 .green-project .project-rectangle {
@@ -975,20 +1508,20 @@ body {
 }
 
 .project-info {
-  text-align: center;
+  text-align: left; /* Left align text instead of center */
   max-width: 500px;
-  margin-top: 20px;
+  margin-top: 12px; /* Reduced from 20px to bring closer */
 
   box-sizing: border-box;
   padding: 5px;
 }
 
 .project-title {
-  font-size: 18px;
-  font-weight: 800;
+  font-size: 16px; /* Reduced from 18px */
+  font-weight: 600; /* Reduced from 800 */
   color: #111;
-  margin: 0 0 8px 0;
-  line-height: 1.2;
+  margin: 0 0 6px 0; /* Reduced bottom margin */
+  line-height: 1.3; /* Slightly increased for better readability */
 
   box-sizing: border-box;
   padding: 3px;
@@ -1008,9 +1541,36 @@ body {
 /* No hover states - static layout only */
 
 /* Responsive adjustments */
+@media (max-width: 900px) {
+  .work-summary {
+    gap: clamp(20px, 4vw, 32px);
+  }
+}
+
 @media (max-width: 768px) {
   .main-projects-title {
     font-size: var(--text-4xl);
+  }
+  
+  .work-summary {
+    top: clamp(120px, 16vh, 180px);
+    grid-template-columns: 1fr;
+    gap: clamp(16px, 3vw, 24px);
+    width: auto;
+  }
+  
+  .work-summary-title {
+    font-size: var(--text-xs);
+    margin-bottom: clamp(6px, 1.5vw, 10px);
+  }
+  
+  .work-summary-list {
+    gap: clamp(4px, 1vw, 8px);
+  }
+  
+  .work-summary-list li {
+    font-size: var(--text-xs);
+    padding-left: clamp(14px, 2vw, 18px);
   }
   
   .projects-track {
@@ -1020,6 +1580,19 @@ body {
   .project-rectangle {
     width: clamp(200px, 60vw, 300px);
     height: clamp(150px, 18vh, 250px);
+  }
+  
+  .project-info {
+    margin-top: 8px; /* Even closer on mobile */
+  }
+  
+  .project-title {
+    font-size: 14px; /* Smaller on mobile */
+    font-weight: 500; /* Lighter on mobile */
+  }
+  
+  .project-subtitle {
+    font-size: 12px; /* Smaller on mobile */
   }
   
   .project-hover-content {
@@ -1048,12 +1621,13 @@ body {
   flex-direction: column;
 
   box-sizing: border-box;
+  padding-bottom: 0; /* Bottom gutter handled by viewport container */
 }
 
 .mini-projects-header {
   width: 100%;
   height: auto;
-  padding: 40px 2rem;
+  padding: 40px clamp(12px, 2.5vw, 32px);
   flex-shrink: 0;
   z-index: 10;
 
@@ -1083,21 +1657,24 @@ body {
   flex: 1;
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: flex-end; /* Place viewport container near bottom */
   justify-content: center;
-
   box-sizing: border-box;
+  /* Bottom spacing now comes from the child's margin-bottom (matches side gutters) */
 }
 
 /* This is the invisible viewport container - the "purple rectangle" reference */
 .mini-projects-viewport-container {
-  position: relative;
-  width: 80vw; /* Smaller width for better visual */
+  position: absolute; /* Sit within container with explicit gutters */
+  left: clamp(12px, 2.5vw, 32px);
+  right: clamp(12px, 2.5vw, 32px);
+  bottom: clamp(12px, 2.5vw, 32px); /* Bottom gutter equals side gutters */
   height: 70vh; /* Adjusted height to fit remaining space */
-  margin: 0 auto; /* Center horizontally */
+  background: transparent !important; /* Ensure transparent by default */
+  width: auto;
+  margin: 0;
 
   box-sizing: border-box;
-  background: #ffffff; /* Pure white by default */
   overflow: hidden;
   z-index: 1; /* Low z-index but visible */
   pointer-events: none; /* Don't interfere with mouse events */
@@ -1139,11 +1716,72 @@ body {
   z-index: 100; /* Much higher z-index to ensure hover works */
   cursor: pointer; /* Show it's interactive */
   pointer-events: auto; /* Ensure cards can receive mouse events */
-  transition: transform 0.3s ease;
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  will-change: transform, opacity;
 }
 
-.mini-project-card:hover {
-  transform: translateY(-5px);
+/* Hover effect - only when not in dark mode */
+.mini-projects:not(.dark-mode) .mini-project-card:hover {
+  transform: translateY(-5px) scale(1);
+}
+
+.mini-project-card.hovered {
+  z-index: 15;
+  transform: translateY(0) scale(1.02);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* During horizontal scrolling, allow JavaScript to control opacity for active project only */
+.mini-project-card.scrolling {
+  pointer-events: none !important; /* Non-hoverable during scrolling */
+  transform: translateY(0) scale(1) !important;
+  transition: transform 0.15s ease, opacity 0.15s ease !important;
+}
+
+/* When centered (at snap point), show centered mini project */
+.mini-project-card.centered {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translateY(0) scale(1) !important;
+}
+
+/* Show non-centered mini projects at 30% opacity when one is centered (not during scrolling) - not hoverable */
+.mini-projects-wrapper:has(.mini-project-card.centered) .mini-project-card:not(.centered):not(.scrolling) {
+  opacity: 0.3 !important;
+  pointer-events: none !important; /* Not hoverable when at 30% opacity */
+  transform: translateY(0) scale(1) !important;
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Only centered mini project should be hoverable - even in dark mode - multiple selectors for reliability */
+.mini-projects-wrapper:has(.mini-project-card.centered) .mini-project-card.centered,
+.mini-projects-container .mini-projects-track .mini-projects-wrapper:has(.mini-project-card.centered) .mini-project-card.centered,
+.mini-projects-viewport-container.dark-mode .mini-projects-track .mini-projects-wrapper:has(.mini-project-card.centered) .mini-project-card.centered {
+  pointer-events: auto !important;
+}
+
+/* Ensure non-centered mini projects are never hoverable, even in dark mode - multiple selectors for reliability */
+.mini-projects-wrapper:has(.mini-project-card.centered) .mini-project-card:not(.centered),
+.mini-projects-wrapper:has(.mini-project-card.centered) .mini-project-card:not(.centered):not(.scrolling),
+.mini-projects-container .mini-projects-track .mini-projects-wrapper:has(.mini-project-card.centered) .mini-project-card:not(.centered),
+.mini-projects-viewport-container.dark-mode .mini-projects-track .mini-projects-wrapper:has(.mini-project-card.centered) .mini-project-card:not(.centered) {
+  pointer-events: none !important;
+}
+
+/* Hide non-hovered mini projects when a mini project is hovered in dark mode (but not during horizontal scrolling) - only centered projects can be hovered */
+.mini-projects-viewport-container.dark-mode .mini-projects-track .mini-projects-wrapper .mini-project-card:not(.hovered):not(.scrolling):not(.centered),
+.mini-projects-viewport-container.dark-mode .mini-projects-track .mini-projects-wrapper .mini-project-card.purple-project:not(.hovered):not(.scrolling):not(.centered),
+.mini-projects-viewport-container.dark-mode .mini-projects-track .mini-projects-wrapper .mini-project-card.orange-project:not(.hovered):not(.scrolling):not(.centered),
+.mini-projects-viewport-container.dark-mode .mini-projects-track .mini-projects-wrapper .mini-project-card.teal-project:not(.hovered):not(.scrolling):not(.centered),
+.mini-projects-viewport-container.dark-mode .mini-projects-track .mini-projects-wrapper .mini-project-card.yellow-project:not(.hovered):not(.scrolling):not(.centered) {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(20px) scale(0.95) !important;
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  will-change: transform, opacity;
 }
 
 .mini-project-rectangle {
@@ -1217,8 +1855,12 @@ body {
   }
   
   .mini-projects-viewport-container {
-    width: 90vw;
+    left: clamp(12px, 2.5vw, 32px);
+    right: clamp(12px, 2.5vw, 32px);
+    bottom: clamp(12px, 2.5vw, 32px);
     height: 60vh;
+    width: auto;
+    margin: 0;
   }
   
   .mini-projects-wrapper {
@@ -1233,6 +1875,256 @@ body {
   
   .mini-project-info {
     max-width: clamp(150px, 40vw, 200px);
+  }
+}
+
+/* Marquee and Contact Options Section */
+.marquee-contact-section {
+  width: 100vw;
+  min-height: 100vh;
+  background-color: #f5f5f0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding: 0;
+  box-sizing: border-box;
+  transition: background-color 0.8s ease, color 0.8s ease;
+}
+
+/* Marquee Wrapper */
+.marquee-wrapper {
+  width: 100%;
+  overflow: hidden;
+  padding: clamp(40px, 8vw, 100px) 0;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.marquee-content {
+  display: flex;
+  gap: 4rem;
+  will-change: transform;
+  white-space: nowrap;
+}
+
+.marquee-text {
+  font-family: 'Nohemi', var(--font-heading);
+  font-size: clamp(48px, 8vw, 120px);
+  font-weight: var(--font-weight-medium);
+  color: inherit;
+  letter-spacing: var(--letter-spacing-tight);
+  padding-right: 4rem;
+}
+
+/* Contact Options Wrapper */
+.contact-options-wrapper {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: clamp(40px, 5vw, 80px) clamp(24px, 5vw, 64px);
+  box-sizing: border-box;
+}
+
+.contact-options-header {
+  display: grid;
+  justify-items: end;
+  box-sizing: border-box;
+}
+
+.contact-options-kicker {
+  font-family: 'Nohemi', var(--font-heading);
+  font-size: clamp(12px, 1.8vw, 16px);
+  color: inherit;
+  margin-bottom: clamp(12px, 2vw, 16px);
+  opacity: 0.7;
+  box-sizing: border-box;
+}
+
+.contact-options-title {
+  display: grid;
+  gap: clamp(8px, 1.8vw, 14px);
+  text-align: right;
+  box-sizing: border-box;
+}
+/* Keep only the kicker left-aligned */
+.contact-options-kicker {
+  justify-self: start;
+  text-align: left;
+}
+
+.contact-option-line {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: clamp(8px, 1.2vw, 16px);
+  box-sizing: border-box;
+  height: auto;
+  white-space: nowrap;
+  padding: 0;
+  margin: 0;
+  position: relative;
+  transform: translateX(0);
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.contact-option-line:hover {
+  transform: translateX(-10px);
+}
+
+.contact-option-text {
+  font-family: 'Nohemi', var(--font-heading);
+  font-size: clamp(44px, 8.5vw, 100px);
+  font-weight: 800;
+  -webkit-text-stroke: 2px currentColor;
+  -webkit-text-stroke-width: 2px;
+  -webkit-text-stroke-position: inside;
+  color: transparent;
+  letter-spacing: 2px;
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* Hover effect for contact options - fill animation */
+.contact-option-line:hover .contact-option-text {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat;
+  background-position: left bottom;
+  background-size: 100% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: currentColor;
+  transition: background-size 0.3s ease-out;
+}
+
+.contact-option-line .arrow {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: clamp(40px, 8vw, 80px);
+  flex-shrink: 0;
+}
+
+.contact-option-line .icon-base {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.contact-option-line .fill-clip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  clip-path: inset(100% 0% 0% 0%);
+  pointer-events: none;
+  transition: clip-path 0.3s ease-out;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.contact-option-line .icon-fill {
+  color: currentColor;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Hover states for arrow fill */
+.contact-option-line:hover .fill-clip {
+  clip-path: inset(0% 0% 0% 0%);
+}
+
+/* Morphing icon styling for contact options */
+.contact-option-line .morphing-icon {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.contact-option-line .morphing-icon svg {
+  width: clamp(60px, 6vw, 80px);
+  height: clamp(50px, 5vw, 70px);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.contact-option-line .morphing-icon svg path {
+  stroke: currentColor;
+  fill: none;
+}
+
+.contact-option-line .morphing-icon.icon-fill svg path {
+  fill: currentColor;
+}
+
+/* Arrow SVG styling for dark mode */
+.contact-option-line .arrow svg {
+  transition: filter 0.05s ease;
+}
+
+/* Dark mode arrow SVGs */
+.marquee-contact-section.dark-mode .contact-option-line .arrow svg {
+  filter: brightness(0) invert(1);
+}
+
+/* Dark mode PNG images */
+.marquee-contact-section.dark-mode .category-svg img {
+  filter: brightness(0) invert(1);
+}
+
+/* Dark mode text color overrides */
+.marquee-contact-section.dark-mode {
+  background-color: #000000;
+  color: #ffffff;
+}
+
+.marquee-contact-section.dark-mode .contact-options-kicker {
+  color: #ffffff;
+}
+
+.marquee-contact-section.dark-mode .contact-option-text {
+  -webkit-text-stroke: 2px #ffffff;
+}
+
+.marquee-contact-section.dark-mode .marquee-text {
+  color: #ffffff;
+}
+
+/* Responsive Design for Marquee Contact Section */
+@media (max-width: 900px) {
+  .contact-options-header {
+    justify-items: start;
+  }
+  
+  .contact-options-title {
+    text-align: left;
+  }
+  
+  .contact-option-line {
+    justify-content: flex-start;
+  }
+  
+  .marquee-text {
+    font-size: clamp(32px, 10vw, 80px);
   }
 }
 

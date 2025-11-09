@@ -15,6 +15,7 @@ const TextPressure = ({
     strokeColor = '#FF0000',
     strokeWidth = 2,
     className = '',
+    debugMode = false,
 }) => {
     
     const containerRef = useRef(null);
@@ -145,7 +146,8 @@ const TextPressure = ({
     return (
         <div
             ref={containerRef}
-            className="relative w-full h-full overflow-hidden bg-transparent"
+            className="relative inline-block overflow-hidden bg-transparent"
+            style={{ lineHeight: 0, verticalAlign: 'top' }}
         >
             <style>{`
             @font-face {
@@ -161,11 +163,11 @@ const TextPressure = ({
               font-family: '${fontFamily}', 'Arial', sans-serif !important;
               white-space: nowrap !important;
               font-size: clamp(3rem, 2.5rem + 8vw, 12rem) !important;
-              line-height: 1 !important;
+              line-height: 0.65em !important;
               margin: 0 !important;
-              padding: 0 !important;
+              padding-top: 0.15em;
               height: auto !important;
-              display: block !important;
+              display: inline-block !important;
               font-weight: 500 !important;
               letter-spacing: -0.02em !important;
               color: #000000 !important;
@@ -193,12 +195,12 @@ const TextPressure = ({
                     } ${stroke ? 'stroke' : ''} uppercase text-center`}
                 style={{
                     fontFamily,
-                    lineHeight,
                     transform: `scale(1, ${scaleY})`,
                     transformOrigin: 'center top',
                     margin: 0,
                     color: stroke ? undefined : textColor,
                     fontVariationSettings: "'wght' 400, 'wdth' 100, 'ital' 0", // Base variable font settings
+                    ...(debugMode ? { border: '2px solid cyan', display: 'inline-block', lineHeight: 1, verticalAlign: 'top' } : {})
                 }}
             >
                 {chars.map((char, i) => (

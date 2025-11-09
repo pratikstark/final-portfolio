@@ -12,34 +12,64 @@ const AnimationLibraryProject = () => {
   const imagesRef = useRef([]);
 
   useEffect(() => {
-    // Hero section animation
-    gsap.fromTo(heroRef.current, 
-      { opacity: 0, y: 50 },
-      { 
-        opacity: 1, 
-        y: 0, 
-        duration: 1.2, 
-        ease: "power2.out" 
+    // Clean up any existing ScrollTriggers first
+    ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+
+    // Reset scroll position with proper null checks and timing
+    requestAnimationFrame(() => {
+      try {
+        window.scrollTo(0, 0);
+        if (document && document.documentElement) {
+          try {
+            document.documentElement.scrollTop = 0;
+          } catch (e) {
+            // Ignore if documentElement is null
+          }
+        }
+        if (document && document.body) {
+          try {
+            document.body.scrollTop = 0;
+          } catch (e) {
+            // Ignore if body is null
+          }
+        }
+      } catch (e) {
+        // Ignore scroll reset errors
       }
-    );
+    });
+
+    // Hero section animation
+    if (heroRef.current) {
+      gsap.fromTo(heroRef.current, 
+        { opacity: 0, y: 50 },
+        { 
+          opacity: 1, 
+          y: 0, 
+          duration: 1.2, 
+          ease: "power2.out" 
+        }
+      );
+    }
 
     // Content animation
-    gsap.fromTo(contentRef.current.children,
-      { opacity: 0, y: 30 },
-      { 
-        opacity: 1, 
-        y: 0, 
-        duration: 0.8, 
-        stagger: 0.2,
-        ease: "power2.out",
-        scrollTrigger: {
-          trigger: contentRef.current,
-          start: "top 80%",
-          end: "bottom 20%",
-          toggleActions: "play none none reverse"
+    if (contentRef.current && contentRef.current.children) {
+      gsap.fromTo(contentRef.current.children,
+        { opacity: 0, y: 30 },
+        { 
+          opacity: 1, 
+          y: 0, 
+          duration: 0.8, 
+          stagger: 0.2,
+          ease: "power2.out",
+          scrollTrigger: {
+            trigger: contentRef.current,
+            start: "top 80%",
+            end: "bottom 20%",
+            toggleActions: "play none none reverse"
+          }
         }
-      }
-    );
+      );
+    }
 
     // Image entrance animations
     imagesRef.current.forEach((img, index) => {

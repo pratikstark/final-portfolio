@@ -23,6 +23,7 @@ const VerticalCutReveal = forwardRef(({
   splitBy = "words",
   staggerDuration = 0.2,
   staggerFrom = "first",
+  space = " ",
   containerClassName,
   wordLevelClassName,
   elementLevelClassName,
@@ -110,17 +111,9 @@ const VerticalCutReveal = forwardRef(({
   )
 
   const startAnimation = useCallback(() => {
-    console.log('🎬 VerticalCutReveal startAnimation called!')
-    console.log('📝 Text:', text)
-    console.log('👶 Children:', children)
-    console.log('🔄 Current isAnimating state:', isAnimating)
-    console.log('⚙️ splitBy:', splitBy)
-    console.log('⏱️ staggerDuration:', staggerDuration)
-    console.log('🎯 staggerFrom:', staggerFrom)
-    console.log('🔄 autoStart:', autoStart)
     setIsAnimating(true)
     onStart?.()
-  }, [onStart, text, children, isAnimating, splitBy, staggerDuration, staggerFrom, autoStart])
+  }, [onStart])
 
   useImperativeHandle(ref, () => ({
     startAnimation,
@@ -129,18 +122,11 @@ const VerticalCutReveal = forwardRef(({
 
   useEffect(() => {
     if (autoStart && text) {
-      console.log('🚀 VerticalCutReveal autoStart triggered!')
-      console.log('📝 Text:', text)
-      console.log('🔄 AutoStart:', autoStart)
-      console.log('📊 Elements count:', elements.length)
       // Small delay to ensure component is properly mounted
       const timer = setTimeout(() => {
-        console.log('⏰ AutoStart timer fired, calling startAnimation')
         startAnimation()
       }, 100)
       return () => clearTimeout(timer)
-    } else {
-      console.log('⚠️ AutoStart conditions not met:', { autoStart, text, elementsCount: elements?.length })
     }
   }, [autoStart, text, startAnimation, elements])
 
@@ -155,7 +141,6 @@ const VerticalCutReveal = forwardRef(({
     }),
   }
 
-  console.log('VerticalCutReveal rendering with text:', text, 'isAnimating:', isAnimating, 'elements:', elements)
 
   return (
     <span
@@ -211,7 +196,7 @@ const VerticalCutReveal = forwardRef(({
                 </motion.span>
               </span>
             ))}
-            {wordObj.needsSpace && <span> </span>}
+            {wordObj.needsSpace && <span>{space}</span>}
           </span>
         )
       })}
