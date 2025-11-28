@@ -20,7 +20,9 @@ html.lenis {
 }
 
 /* Hide default cursor globally */
-html, body, * {
+html,
+body,
+* {
   cursor: none !important;
 }
 
@@ -50,7 +52,8 @@ html, body, * {
 }
 
 html {
-  height: 100%; /* Ensure html takes full height */
+  height: 100%;
+  /* Ensure html takes full height */
   min-height: 100vh;
 }
 
@@ -58,7 +61,8 @@ body {
   margin: 0;
   padding: 0;
   overflow-x: hidden;
-  height: 100%; /* Ensure body takes full height */
+  height: 100%;
+  /* Ensure body takes full height */
   min-height: 100vh;
 }
 
@@ -72,16 +76,20 @@ html::-webkit-scrollbar-track,
 body::-webkit-scrollbar-track,
 *::-webkit-scrollbar-track {
   background-color: transparent;
-  margin: 0; /* Eliminate gaps at top/bottom */
-  border: none; /* No borders that create visual gaps */
-  box-shadow: none; /* Remove inset shadows that can look like gaps */
+  margin: 0;
+  /* Eliminate gaps at top/bottom */
+  border: none;
+  /* No borders that create visual gaps */
+  box-shadow: none;
+  /* Remove inset shadows that can look like gaps */
 }
 
 html::-webkit-scrollbar,
 body::-webkit-scrollbar,
 *::-webkit-scrollbar {
   width: 5px;
-  height: 5px; /* Ensure thumb spans full thickness */
+  height: 5px;
+  /* Ensure thumb spans full thickness */
   background-color: transparent;
 }
 
@@ -89,8 +97,10 @@ html::-webkit-scrollbar-thumb,
 body::-webkit-scrollbar-thumb,
 *::-webkit-scrollbar-thumb {
   background-color: #000000;
-  border-radius: 0; /* No rounded corners */
-  border: none; /* Ensure no inner gap introduced by borders */
+  border-radius: 0;
+  /* No rounded corners */
+  border: none;
+  /* Ensure no inner gap introduced by borders */
   box-shadow: none;
 }
 
@@ -99,14 +109,16 @@ html::-webkit-scrollbar-track-piece,
 body::-webkit-scrollbar-track-piece,
 *::-webkit-scrollbar-track-piece {
   background-color: transparent;
-  margin: 0; /* Ensure thumb sits flush to the edge */
+  margin: 0;
+  /* Ensure thumb sits flush to the edge */
   border: none;
 }
 
 html::-webkit-scrollbar-corner,
 body::-webkit-scrollbar-corner,
 *::-webkit-scrollbar-corner {
-  background-color: transparent; /* No corner block */
+  background-color: transparent;
+  /* No corner block */
 }
 
 /* Remove WebKit scrollbar buttons to prevent extra spacing */
@@ -119,14 +131,22 @@ body::-webkit-scrollbar-button,
 }
 
 /* Firefox scrollbar (track transparent) */
-html, body {
-  scrollbar-width: thin; /* Similar to 5px */
-  scrollbar-color: #000000 transparent; /* thumb | track */
-  scrollbar-gutter: auto; /* Avoid reserving extra gutter space */
+html,
+body {
+  scrollbar-width: thin;
+  /* Similar to 5px */
+  scrollbar-color: #000000 transparent;
+  /* thumb | track */
+  scrollbar-gutter: auto;
+  /* Avoid reserving extra gutter space */
 }
 
 /* Unified background for all sections */
-.hero, .about, .main-projects, .mini-projects, .contact {
+.hero,
+.about,
+.main-projects,
+.mini-projects,
+.contact {
   background-color: #f5f5f0;
 }
 
@@ -137,7 +157,8 @@ html, body {
 }
 
 #smooth-content {
-  height: auto; /* Allow content to grow */
+  height: auto;
+  /* Allow content to grow */
   min-height: 100vh;
 }
 
@@ -156,7 +177,8 @@ html, body {
   box-sizing: border-box;
 }
 
-.loader-percentage, .percentage {
+.loader-percentage,
+.percentage {
   font-size: clamp(2rem, 8vw, 4rem);
   font-weight: bold;
   color: white;
@@ -193,12 +215,15 @@ html, body {
 }
 
 /* Hero wrapper (pinned) - Ensure full viewport height */
-.hero { 
-  position: relative; 
-  height: 100vh; 
-  min-height: 100vh; /* Ensure minimum viewport height */
-  width: 100vw; /* Ensure full viewport width */
-  overflow: hidden; /* Prevent content overflow */
+.hero {
+  position: relative;
+  height: 100vh;
+  min-height: 100vh;
+  /* Ensure minimum viewport height */
+  width: 100vw;
+  /* Ensure full viewport width */
+  overflow: hidden;
+  /* Prevent content overflow */
   box-sizing: border-box;
 }
 
@@ -212,9 +237,13 @@ html, body {
   height: 100vh;
   z-index: 1;
   box-sizing: border-box;
-  will-change: transform, width, height, top, left;
-  overflow: hidden; /* Prevent video from overflowing container */
+  will-change: transform, width, height, top, left, clip-path;
+  overflow: hidden;
+  /* Prevent video from overflowing container */
+  clip-path: inset(0% 0% 0% 0%);
+  /* Initial clip-path for smooth collapse */
 }
+
 .video-container video {
   width: 100%;
   height: 100%;
@@ -226,21 +255,27 @@ html, body {
 /* Content text (below video banner) */
 .content-text {
   position: absolute;
-  bottom: 0; /* anchor to bottom in second state */
+  bottom: 0;
+  /* anchor to bottom in second state */
   left: 0;
   width: 100vw;
-  height: auto; /* Hug content height */
+  height: auto;
+  /* Hug content height */
   display: grid;
   place-items: center;
-  padding: 24px 20px clamp(12px, 2.5vw, 32px) 20px; /* Top: 24px, bottom: clamp(12px, 2.5vw, 32px) to match video top margin */
+  padding: 24px 20px clamp(12px, 2.5vw, 32px) 20px;
+  /* Top: 24px, bottom: clamp(12px, 2.5vw, 32px) to match video top margin */
   text-align: center;
   z-index: 2;
   background-color: #f5f5f0;
   box-sizing: border-box;
-  transform: translateY(100%); /* start fully below viewport */
+  transform: translateY(100%);
+  /* start fully below viewport */
   will-change: transform;
-  min-height: 35vh; /* Ensure minimum height for content */
-  max-height: 35vh; /* 30% taller than previous 40vh */
+  min-height: 35vh;
+  /* Ensure minimum height for content */
+  max-height: 35vh;
+  /* 30% taller than previous 40vh */
 }
 
 .text-content {
@@ -257,7 +292,8 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 24px; /* Uniform 24px vertical spacing */
+  gap: 24px;
+  /* Uniform 24px vertical spacing */
   width: 100%;
   max-width: 90vw;
 
@@ -280,7 +316,7 @@ html, body {
   /* Font Families */
   --font-heading: 'Nohemi', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-body: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  
+
   /* Font Weights */
   --font-weight-light: 300;
   --font-weight-normal: 400;
@@ -289,19 +325,19 @@ html, body {
   --font-weight-bold: 700;
   --font-weight-extrabold: 800;
   --font-weight-black: 900;
-  
+
   /* Letter Spacing */
   --letter-spacing-tight: -0.02em;
   --letter-spacing-normal: 0;
   --letter-spacing-wide: 0.02em;
   --letter-spacing-wider: 0.05em;
-  
+
   /* Line Heights */
   --line-height-tight: 1.1;
   --line-height-normal: 1.4;
   --line-height-relaxed: 1.6;
   --line-height-loose: 1.8;
-  
+
   /* Font Sizes - Responsive Scale */
   --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
   --text-sm: clamp(0.875rem, 0.8rem + 0.375vw, 1rem);
@@ -315,7 +351,7 @@ html, body {
   --text-6xl: clamp(3.75rem, 3rem + 3.75vw, 5rem);
   --text-7xl: clamp(4.5rem, 3.5rem + 5vw, 6rem);
   --text-8xl: clamp(6rem, 4.5rem + 7.5vw, 8rem);
-  
+
   /* Colors */
   --color-text-primary: #111111;
   --color-text-secondary: #666666;
@@ -409,14 +445,16 @@ html, body {
 
 .caption {
 
-.hero-name {
-  font-family: "Nohemi", sans-serif !important;
-  font-size: clamp(6rem, 4.5rem + 7.5vw, 8rem) !important;
-  font-weight: 500 !important;
-  line-height: 1.1 !important;
-  letter-spacing: -0.02em !important;
-  color: #111111 !important;
-}  font-family: var(--font-body);
+  .hero-name {
+    font-family: "Nohemi", sans-serif !important;
+    font-size: clamp(6rem, 4.5rem + 7.5vw, 8rem) !important;
+    font-weight: 500 !important;
+    line-height: 1.1 !important;
+    letter-spacing: -0.02em !important;
+    color: #111111 !important;
+  }
+
+  font-family: var(--font-body);
   font-size: var(--text-xs);
   font-weight: var(--font-weight-normal);
   line-height: var(--line-height-normal);
@@ -471,7 +509,8 @@ html, body {
   background-color: #000;
   border-radius: 50%;
   pointer-events: none;
-  z-index: 10000 !important; /* Ensure cursor is always on top */
+  z-index: 10000 !important;
+  /* Ensure cursor is always on top */
   transform: translate(-50%, -50%);
   filter: invert(1);
   mix-blend-mode: difference;
@@ -485,7 +524,8 @@ html, body {
   border-radius: 50%;
   background-color: transparent;
   pointer-events: none;
-  z-index: 9999 !important; /* Ensure trail is always visible */
+  z-index: 9999 !important;
+  /* Ensure trail is always visible */
   transform: translate(-50%, -50%);
   transition: all 0.2s ease-out;
   filter: invert(1);
@@ -493,8 +533,8 @@ html, body {
 }
 
 /* Ensure cursor trail is visible in dark mode */
-.main-projects.dark-mode ~ .custom-cursor,
-.main-projects.dark-mode ~ .cursor-trail,
+.main-projects.dark-mode~.custom-cursor,
+.main-projects.dark-mode~.cursor-trail,
 body:has(.main-projects.dark-mode) .custom-cursor,
 body:has(.main-projects.dark-mode) .cursor-trail {
   z-index: 10000 !important;
@@ -515,15 +555,26 @@ body:has(.main-projects.dark-mode) .cursor-trail {
 /* Ensure cursor trail is visible on dark backgrounds - white/inverted in dark mode */
 body:has(.main-projects.dark-mode) .cursor-trail {
   border-color: #ffffff !important;
-  background-color: transparent !important; /* No glass background */
-  mix-blend-mode: normal !important; /* Override difference mode for visibility on dark backgrounds */
-  filter: none !important; /* Remove invert filter in dark mode */
+  background-color: transparent !important;
+  /* No glass background */
+  mix-blend-mode: normal !important;
+  /* Override difference mode for visibility on dark backgrounds */
+  filter: none !important;
+  /* Remove invert filter in dark mode */
 }
 
 body:has(.main-projects.dark-mode) .custom-cursor {
   background-color: #ffffff !important;
-  mix-blend-mode: normal !important; /* Override difference mode for visibility on dark backgrounds */
-  filter: none !important; /* Remove invert filter in dark mode */
+  mix-blend-mode: normal !important;
+  /* Override difference mode for visibility on dark backgrounds */
+  filter: none !important;
+  /* Remove invert filter in dark mode */
+}
+
+/* Invert cursor label colors in dark mode */
+body:has(.main-projects.dark-mode) .cursor-label {
+  background: #fff !important;
+  color: #000 !important;
 }
 
 /* Also apply to magnetic states in dark mode */
@@ -535,16 +586,39 @@ body:has(.main-projects.dark-mode) .cursor-trail.magnetic-square {
 
 /* Magnetic cursor trail states for projects */
 .cursor-trail.magnetic-rectangle {
-  width: 540px; /* Covers entire project card width */
-  height: 380px; /* Covers entire project card height including text */
+  width: 520px;
+  /* Covers entire project card width */
+  height: 340px;
+  /* Reduced height - tighter trail around project card */
   border-radius: 0;
   border-width: 2px;
   transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .cursor-trail.magnetic-square {
-  width: 220px; /* 200px + 20px padding */
-  height: 320px; /* 200px square + 20px margin + ~100px for text */
+  width: 220px;
+  /* 200px + 20px padding */
+  height: 285px;
+  /* 200px square + 20px margin + ~100px for text */
+  border-radius: 0;
+  border-width: 2px;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Magnetic cursor trail for audio button (square state) */
+.cursor-trail.magnetic-audio-button {
+  width: 60px;
+  height: 60px;
+  border-radius: 0;
+  border-width: 2px;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Magnetic cursor trail for audio button (rectangular state) */
+.cursor-trail.magnetic-audio-button-rect {
+  width: 140px;
+  /* Wider for "Unmute + Icon" text */
+  height: 60px;
   border-radius: 0;
   border-width: 2px;
   transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
@@ -553,7 +627,8 @@ body:has(.main-projects.dark-mode) .cursor-trail.magnetic-square {
 /* About title hover rectangular border (long and small) */
 .cursor-trail.about-rect {
   /* Width/height will be set dynamically to match hovered text bounds */
-  border-radius: 0; /* sharp edges */
+  border-radius: 0;
+  /* sharp edges */
   border-width: 2px;
   transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
@@ -567,7 +642,8 @@ body:has(.main-projects.dark-mode) .cursor-trail.magnetic-square {
   background: #000;
   color: #fff;
   padding: 6px 10px;
-  border-radius: 0; /* sharp edges */
+  border-radius: 0;
+  /* sharp edges */
   font-size: 12px;
   line-height: 1;
   font-family: var(--font-body);
@@ -577,6 +653,7 @@ body:has(.main-projects.dark-mode) .cursor-trail.magnetic-square {
   transition: opacity 0.15s ease, transform 0.15s ease;
   white-space: nowrap;
 }
+
 .cursor-label.visible {
   opacity: 1;
 }
@@ -587,7 +664,7 @@ body:has(.main-projects.dark-mode) .cursor-trail.magnetic-square {
     width: clamp(220px, 70vw, 320px);
     height: clamp(200px, 25vh, 280px);
   }
-  
+
   .cursor-trail.magnetic-square {
     width: clamp(180px, 50vw, 220px);
     height: clamp(200px, 25vh, 280px);
@@ -596,21 +673,27 @@ body:has(.main-projects.dark-mode) .cursor-trail.magnetic-square {
 
 /* Responsive Breakpoints */
 @media (max-width: 1024px) {
-  .content-text { 
-    padding: 20px 18px clamp(12px, 2.5vw, 32px) 18px; /* Bottom padding matches video top margin */
+  .content-text {
+    padding: 20px 18px clamp(12px, 2.5vw, 32px) 18px;
+    /* Bottom padding matches video top margin */
   }
 }
+
 @media (max-width: 768px) {
-  .content-text { 
-    padding: 10px clamp(12px, 2.5vw, 32px) 10px 10px; /* Top: 10px, bottom: clamp(12px, 2.5vw, 32px), left/right: 10px */
+  .content-text {
+    padding: 10px clamp(12px, 2.5vw, 32px) 10px 10px;
+    /* Top: 10px, bottom: clamp(12px, 2.5vw, 32px), left/right: 10px */
   }
+
   .text-group {
-    gap: 20px; /* Slightly smaller gap on mobile */
+    gap: 20px;
+    /* Slightly smaller gap on mobile */
   }
 }
 
 /* High DPI displays */
-@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+@media (-webkit-min-device-pixel-ratio: 2),
+(min-resolution: 192dpi) {
   .text-title {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -622,17 +705,21 @@ body:has(.main-projects.dark-mode) .cursor-trail.magnetic-square {
 .mini-projects-viewport-container {
   border: none;
   box-shadow: none;
-  background: transparent !important; /* Invisible/transparent */
+  background: transparent !important;
+  /* Invisible/transparent */
 }
 
 /* Spacer after hero to allow natural scrolling */
 /* About Section Wireframe */
 .about {
   position: relative;
-  min-height: 100vh; /* One viewport height to avoid excessive space */
-  background: #f5f5f0; /* Unified background */
+  min-height: 100vh;
+  /* One viewport height to avoid excessive space */
+  background: #f5f5f0;
+  /* Unified background */
   box-sizing: border-box;
-  overflow: visible; /* Don't crop content */
+  overflow: visible;
+  /* Don't crop content */
 }
 
 .about-inner {
@@ -641,94 +728,356 @@ body:has(.main-projects.dark-mode) .cursor-trail.magnetic-square {
   margin-right: clamp(12px, 2.5vw, 32px);
   will-change: transform;
   box-sizing: border-box;
-  min-height: 80vh; /* At least full viewport height */
-  height: auto; /* Grow as needed when details expand */
-  display: flex; /* Vertical distribution */
+  min-height: 80vh;
+  /* At least full viewport height */
+  height: auto;
+  /* Grow as needed when details expand */
+  display: flex;
+  /* Vertical distribution */
   flex-direction: column;
-  justify-content: space-between; /* Topmost titles, bottommost grid */
+  justify-content: space-between;
+  /* Topmost titles, bottommost grid */
 }
 
-.about-header { 
-  display: grid; 
-  justify-items: end; 
+.about-header {
+  display: grid;
+  justify-items: end;
   width: 100%;
   box-sizing: border-box;
 }
 
-.about-kicker { 
-  font-size: clamp(12px, 1.8vw, 16px); 
-  color: #333; 
-  margin-bottom: clamp(12px, 2vw, 16px); 
+.about-kicker {
+  font-size: clamp(12px, 1.8vw, 16px);
+  color: #333;
+  margin-bottom: clamp(12px, 2vw, 16px);
 
   box-sizing: border-box;
 }
-.about-title { 
-  display: grid; 
-  gap: 0; /* no gap now that arrows are removed */ 
-  text-align: right; 
 
-  box-sizing: border-box;
-}
-.about-title-line { 
-  display: flex; 
-  align-items: center; 
-  justify-content: flex-end; 
+.about-title {
+  display: grid;
   gap: 0;
-  font-size: clamp(44px, 8.5vw, 100px); /* tad smaller */
-  font-weight: 800; 
-  -webkit-text-stroke: 2px #111; 
-  color: transparent; 
-  letter-spacing: 2px; 
+  /* no gap now that arrows are removed */
+  text-align: right;
 
   box-sizing: border-box;
-  height: auto; /* Adapt to content height */
-  white-space: nowrap; /* Prevent text wrapping */
-  padding: 0; /* Remove any padding */
-  margin: 0; /* Remove any margin */
-  position: relative; /* Ensure positioning context */
-  transform: translateX(0); /* Lock horizontal position */
 }
+
+.about-title-line {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: clamp(10px, 2vw, 20px);
+  /* Gap between category icon and arrow widget */
+  font-size: clamp(44px, 8.5vw, 100px);
+  /* tad smaller */
+  font-weight: 800;
+  -webkit-text-stroke: 2px #111;
+  color: transparent;
+  letter-spacing: 2px;
+
+  box-sizing: border-box;
+  height: auto;
+  /* Adapt to content height */
+  white-space: nowrap;
+  /* Prevent text wrapping */
+  padding: 0;
+  /* Remove any padding */
+  margin: 0 0 0 auto;
+  /* Remove top/bottom margins, auto left to push right */
+  position: relative;
+  /* Ensure positioning context */
+  transform: translateX(0);
+  /* Lock horizontal position */
+  width: fit-content;
+  /* Match content width (SVG + arrow) */
+}
+
 .about-title-line .about-label {
   position: relative;
   background-image: linear-gradient(#111, #111);
   background-repeat: no-repeat;
   background-position: left bottom;
-  background-size: 100% 0%; /* animate to 100% 100% */
+  background-size: 100% 0%;
+  /* animate to 100% 100% */
   -webkit-text-stroke: 2px #111;
   color: transparent;
-
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  transition: background-size 0.3s ease-out;
   box-sizing: border-box;
 }
-.about-title-line .arrow { 
-  position: relative; 
-  display: flex; 
-  align-items: center;
+
+.about-title-line:hover .about-label {
+  background-size: 100% 100%;
+  /* Fill from bottom to top on hover */
+}
+
+.about-title-line .arrow {
+  position: relative;
+  display: inline-flex;
+  align-items: flex-end;
   justify-content: center;
-
+  align-self: flex-end;
+  line-height: 0;
   box-sizing: border-box;
-  height: clamp(40px, 8vw, 80px); /* Same height as category SVG */
-  flex-shrink: 0; /* Don't shrink the arrow */
+  height: clamp(35px, 3.5vw, 50px) !important;
+  width: clamp(41px, 4.1vw, 58px) !important;
+  flex-shrink: 0;
+  margin: 0 !important;
+  padding: 0 !important;
 }
-.about-title-line .icon-base { 
-  position: relative; 
+
+/* Arrow/Close Widget Styles */
+.arrow-close-widget {
+  position: relative;
+  display: inline-flex;
+  align-items: flex-end;
+  justify-content: center;
+  align-self: flex-end;
+  line-height: 0;
+  height: clamp(35px, 3.5vw, 50px) !important;
+  width: clamp(41px, 4.1vw, 58px) !important;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.arrow-close-base {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+  z-index: 1;
+  transform-origin: center center;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease-out;
+}
+
+.arrow-close-base .arrow-svg-stroke {
+  width: 100%;
+  height: 100%;
+  display: block;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.arrow-close-base .arrow-svg-stroke path {
+  fill: none;
+  stroke: #111;
+  stroke-width: 2;
+}
+
+.arrow-close-fill-clip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  clip-path: inset(100% 0% 0% 0%);
+  pointer-events: none;
+  transition: clip-path 0.3s ease-out, transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease-out;
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 2;
+  opacity: 1;
+  /* Ensure fill is visible for hover effect */
+  transform-origin: center center;
+}
+
+.arrow-close-fill-clip .arrow-svg-fill {
+  width: 100%;
+  height: 100%;
+  display: block;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.arrow-close-fill-clip .arrow-svg-fill-path {
+  fill: #111;
+  /* Solid black fill - same as psychology icon */
+}
+
+.arrow-close-close-clip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  clip-path: inset(0% 0% 0% 0%);
+  /* Close icon is always fully visible when shown */
+  pointer-events: none;
+  opacity: 0;
+  /* Hidden by default */
+  box-sizing: border-box;
+  display: block;
+  z-index: 3;
+  /* Above fill */
+}
+
+.arrow-close-close-base {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  box-sizing: border-box;
+  z-index: 1;
+  transform-origin: center center;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease-out;
+}
+
+.arrow-close-close-base .arrow-close-close {
+  width: 100%;
+  height: 100%;
+  display: block;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.arrow-close-close-base .arrow-close-close-path {
+  fill: none;
+  stroke: #111;
+  stroke-width: 2;
+}
+
+.arrow-close-close-fill-clip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  clip-path: inset(100% 0% 0% 0%);
+  pointer-events: none;
+  transition: clip-path 0.3s ease-out;
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 2;
+  opacity: 1;
+  transform-origin: center center;
+}
+
+.arrow-close-close-fill-clip .arrow-close-close-fill {
+  width: 100%;
+  height: 100%;
+  display: block;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.arrow-close-close-fill-clip .arrow-close-close-fill-path {
+  fill: #111;
+  /* Solid black fill - same as arrow */
+}
+
+/* Hover state - arrow fills from bottom - EXACT same as contact section */
+.about-title-line:hover .arrow-close-widget .arrow-close-fill-clip,
+.about-title-line:hover .arrow-close-fill-clip {
+  clip-path: inset(0% 0% 0% 0%) !important;
+}
+
+/* Ensure hover effect works even when not active */
+.about-title-line:hover:not(.active) .arrow-close-widget .arrow-close-fill-clip {
+  clip-path: inset(0% 0% 0% 0%) !important;
+  opacity: 1 !important;
+}
+
+/* Close icon is always filled when active - hover doesn't change it */
+.about-title-line.active .arrow-close-close-fill-clip {
+  clip-path: inset(0% 0% 0% 0%) !important;
+}
+
+/* Active state - rotate arrow to close with smooth transition */
+.about-title-line.active .arrow-close-base {
+  opacity: 0;
+  transform: rotate(-90deg) scale(0.8);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease-out;
+}
+
+.about-title-line.active .arrow-close-fill-clip {
+  opacity: 0;
+  transform: rotate(-90deg) scale(0.8);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease-out;
+}
+
+.about-title-line.active .arrow-close-close-clip {
+  opacity: 1;
+  transition: opacity 0.3s ease-out 0.1s;
+}
+
+.about-title-line.active .arrow-close-close-base {
+  opacity: 0;
+  /* Hide stroke version when active */
+  transform: rotate(0deg) scale(1);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1) 0.1s, opacity 0.3s ease-out 0.1s;
+}
+
+/* Initial state - close icon starts rotated and scaled */
+.arrow-close-close-base {
+  opacity: 0;
+  transform: rotate(90deg) scale(0.8);
+}
+
+/* Close icon is always filled when active - no hover needed */
+.about-title-line.active .arrow-close-close-fill-clip {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+  clip-path: inset(0% 0% 0% 0%) !important;
+  /* Always fully visible when active */
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1) 0.1s, clip-path 0s ease-out 0.1s;
+}
+
+/* Initial state for close fill-clip */
+.arrow-close-close-fill-clip {
+  transform: rotate(90deg) scale(0.8);
+}
+
+.about-title-line .icon-base {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
 
   box-sizing: border-box;
-  height: 100%; /* Fill the arrow container */
+  height: 100%;
+  /* Fill the arrow container */
   width: 100%;
-  overflow: hidden; /* Ensure SVG stays within bounds */
+  overflow: hidden;
+  /* Ensure SVG stays within bounds */
 }
-.about-title-line .fill-clip { 
-  position: absolute; 
+
+.about-title-line .fill-clip {
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  overflow: hidden; 
+  overflow: hidden;
   clip-path: inset(100% 0% 0% 0%);
-  pointer-events: none; 
+  pointer-events: none;
   transition: clip-path 0.3s ease-out;
 
   box-sizing: border-box;
@@ -736,8 +1085,9 @@ body:has(.main-projects.dark-mode) .cursor-trail.magnetic-square {
   align-items: center;
   justify-content: center;
 }
-.about-title-line .icon-fill { 
-  color: #111; 
+
+.about-title-line .icon-fill {
+  color: #111;
   width: 100%;
   height: 100%;
   display: flex;
@@ -747,21 +1097,24 @@ body:has(.main-projects.dark-mode) .cursor-trail.magnetic-square {
 
 /* Morphing icon styling */
 .about-title-line .morphing-icon {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
+  width: clamp(41px, 4.1vw, 58px) !important;
+  /* Match arrow widget size */
+  height: clamp(35px, 3.5vw, 50px) !important;
+  /* Match arrow widget height */
+  display: block;
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  overflow: visible !important;
 }
 
 .about-title-line .morphing-icon svg {
-  width: clamp(60px, 6vw, 80px);
-  height: clamp(50px, 5vw, 70px);
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  width: 100% !important;
+  height: 100% !important;
+  display: block !important;
+  position: static !important;
+  transform: none !important;
+  overflow: visible !important;
 }
 
 /* Path animations */
@@ -814,27 +1167,39 @@ body:has(.main-projects.dark-mode) .cursor-trail.magnetic-square {
   clip-path: inset(0% 0% 0% 0%);
 }
 
-.about-grid { 
-  display: grid; 
-  grid-template-columns: 1fr 1fr; 
-  gap: clamp(16px, 4vw, 48px); /* Restore normal gap */
-  margin-left: 0; /* Ensure no left margin */
-  margin-right: 0; /* Ensure no right margin */
-  padding-top: clamp(24px, 4vw, 48px); /* Restore top padding */
-  padding-bottom: clamp(24px, 4vw, 48px); /* Keep bottom padding */
-  padding-left: 0; /* No left padding */
-  padding-right: 0; /* No right padding */
-  margin-top: auto; /* Push to bottom within flex container */
+.about-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(16px, 4vw, 48px);
+  /* Restore normal gap */
+  margin-left: 0;
+  /* Ensure no left margin */
+  margin-right: 0;
+  /* Ensure no right margin */
+  padding-top: clamp(24px, 4vw, 48px);
+  /* Restore top padding */
+  padding-bottom: clamp(24px, 4vw, 48px);
+  /* Keep bottom padding */
+  padding-left: 0;
+  /* No left padding */
+  padding-right: 0;
+  /* No right padding */
+  margin-top: auto;
+  /* Push to bottom within flex container */
 
   box-sizing: border-box;
   will-change: transform;
-  max-width: 100%; /* Ensure it doesn't exceed parent width */
-  width: 100%; /* Take full width of parent */
+  max-width: 100%;
+  /* Ensure it doesn't exceed parent width */
+  width: 100%;
+  /* Take full width of parent */
 }
-.about-col-left, .about-col-right { 
-  font-size: clamp(14px, 1.8vw, 18px); 
-  line-height: 1.6; 
-  color: #111; 
+
+.about-col-left,
+.about-col-right {
+  font-size: clamp(14px, 1.8vw, 18px);
+  line-height: 1.6;
+  color: #111;
 
   box-sizing: border-box;
   word-wrap: break-word;
@@ -844,14 +1209,16 @@ body:has(.main-projects.dark-mode) .cursor-trail.magnetic-square {
   padding-top: clamp(8px, 1.5vw, 16px);
   padding-bottom: clamp(8px, 1.5vw, 16px);
 }
-.about-strong { 
-  font-weight: 700; 
+
+.about-strong {
+  font-weight: 700;
 
   box-sizing: border-box;
 }
-.about-caption { 
-  color: #444; 
-  font-style: italic; 
+
+.about-caption {
+  color: #444;
+  font-style: italic;
 
   box-sizing: border-box;
 }
@@ -865,8 +1232,9 @@ body:has(.main-projects.dark-mode) .cursor-trail.magnetic-square {
 
   box-sizing: border-box;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: flex-end;
+  align-self: flex-end;
 }
 
 .category-svg svg {
@@ -888,8 +1256,9 @@ body:has(.main-projects.dark-mode) .cursor-trail.magnetic-square {
 .category-svg .svg-fill {
   fill: #111;
   clip-path: inset(100% 0% 0% 0%);
-  will-change: clip-path;
   transition: clip-path 0.3s ease-out;
+  /* Match arrow fill animation exactly */
+  will-change: clip-path;
 
   box-sizing: border-box;
 }
@@ -930,6 +1299,7 @@ body.debug-mode::after {
   width: auto;
   height: 100%;
   object-fit: contain;
+  object-position: bottom;
   box-sizing: border-box;
   transition: filter 0.05s ease;
   display: block;
@@ -960,15 +1330,19 @@ body.debug-mode::after {
   letter-spacing: 2px;
   margin: 0;
   display: flex;
-  align-items: center;
-  justify-content: flex-end; /* Right align content */
+  align-items: flex-end;
+  justify-content: flex-end;
+  /* Right align content */
   gap: clamp(10px, 2vw, 20px);
   cursor: pointer;
   position: relative;
   height: auto;
   white-space: nowrap;
   padding: 0;
-  width: 100%; /* Ensure full width */
+  width: fit-content;
+  /* Match content width (SVG + arrow) */
+  margin: 0 0 0 auto;
+  /* Remove top/bottom margins, auto left to push right */
 }
 
 /* Detail section for clicked categories */
@@ -978,23 +1352,28 @@ body.debug-mode::after {
   box-sizing: border-box;
   will-change: opacity, height;
   position: relative;
-  transform: translateY(0); /* Ensure no vertical movement */
+  transform: translateY(0);
+  /* Ensure no vertical movement */
   height: 0;
   overflow: hidden;
-  background: #fff; /* Clean white background */
-  margin: 0; /* Remove any margin */
-  padding: 0; /* Remove any padding */
+  margin: 0;
+  /* Remove any margin */
+  padding: 0;
+  /* Remove any padding */
 }
 
 .detail-content {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: auto 1fr;
+  /* Image takes only needed space, text fills the rest */
   gap: clamp(16px, 2vw, 32px);
-  align-items: center;
+  margin-top: clamp(32px, 4vw, 64px);
+  align-items: stretch;
+  /* Make both columns same height */
   box-sizing: border-box;
-  padding: 0; /* Remove padding to eliminate space */
+  padding: 0;
+  /* Remove padding to eliminate space */
   height: 100%;
-  background: #fff;
   width: 100%;
 }
 
@@ -1003,11 +1382,20 @@ body.debug-mode::after {
   justify-content: center;
   align-items: center;
   background-color: #000;
-  aspect-ratio: 1;
-  border-radius: 8px;
-  padding: clamp(20px, 4vw, 40px);
-  width: 100%;
+  aspect-ratio: 1/1;
+  /* Square (1:1) orientation */
+  border-radius: 0;
+  /* No border radius */
+  padding: clamp(16px, 3vw, 24px);
+  width: auto;
+  /* Width determined by height and aspect-ratio */
+  height: 100%;
+  /* Match height of text column */
+  max-width: clamp(240px, 30vw, 340px);
+  /* Constrain max width */
   box-sizing: border-box;
+  flex-shrink: 0;
+  /* Don't shrink, let text fill the rest */
 }
 
 .detail-icon {
@@ -1022,8 +1410,10 @@ body.debug-mode::after {
 
 .detail-icon .category-svg {
   max-height: none;
-  height: 80%;
-  width: 80%;
+  height: 70%;
+  /* Slightly smaller */
+  width: 70%;
+  /* Slightly smaller */
 
   box-sizing: border-box;
 }
@@ -1053,7 +1443,13 @@ body.debug-mode::after {
   flex-direction: column;
   gap: clamp(12px, 2vw, 24px);
   width: 100%;
+  min-width: 0;
+  /* Allow text to shrink if needed */
+  height: 100%;
+  /* Match height of image column */
   box-sizing: border-box;
+  justify-content: flex-start;
+  /* Align content to top */
 }
 
 .detail-title {
@@ -1066,7 +1462,10 @@ body.debug-mode::after {
 }
 
 .detail-body {
-  font-size: clamp(14px, 1.8vw, 18px);
+  font-family: var(--font-body);
+  /* Standardize body font */
+  font-size: clamp(12px, 1.5vw, 16px);
+  /* Smaller font size */
   line-height: 1.6;
   color: #111;
   margin: 0;
@@ -1074,20 +1473,60 @@ body.debug-mode::after {
   box-sizing: border-box;
 }
 
+.detail-body p {
+  margin: 0 0 clamp(16px, 2.5vw, 24px) 0;
+  /* Paragraph breaks with spacing */
+}
+
+.detail-body p:last-child {
+  margin-bottom: 0;
+}
+
+.detail-body strong {
+  font-weight: 700;
+  /* Bold text */
+}
+
+.detail-body u {
+  text-decoration: underline;
+  /* Underlined text */
+}
+
 @media (max-width: 900px) {
-  .about-grid { grid-template-columns: 1fr; }
-  .about-header { justify-items: start; }
-  .about-title { text-align: left; }
-  .about-title-line { justify-content: flex-start; }
-  
+  .about-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .about-header {
+    justify-items: start;
+  }
+
+  .about-title {
+    text-align: left;
+  }
+
+  .about-title-line {
+    justify-content: flex-start;
+  }
+
   .detail-content {
     grid-template-columns: 1fr;
     gap: clamp(16px, 3vw, 32px);
   }
-  
+
   .detail-left {
-    max-width: 300px;
+    width: clamp(220px, 45vw, 300px);
+    /* Slightly bigger on mobile too */
+    height: auto;
+    /* Let height be determined by width and aspect-ratio on mobile */
+    aspect-ratio: 1/1;
+    /* Maintain square on mobile */
     margin: 0 auto;
+  }
+
+  .detail-right {
+    height: auto;
+    /* Let height be determined by content on mobile */
   }
 }
 
@@ -1128,6 +1567,15 @@ body.debug-mode::after {
   color: #cccccc;
 }
 
+/* Dark mode for project arrow */
+.main-projects.dark-mode .project-arrow-base .project-arrow-svg-stroke path {
+  stroke: #ffffff;
+}
+
+.main-projects.dark-mode .project-arrow-fill-clip .project-arrow-svg-fill-path {
+  fill: #ffffff;
+}
+
 .light-rays-wrapper {
   position: absolute;
   top: 0;
@@ -1144,7 +1592,8 @@ body.debug-mode::after {
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: 0; /* Behind thumbnails */
+  z-index: 0;
+  /* Behind thumbnails */
   pointer-events: none;
   overflow: hidden;
   opacity: 0;
@@ -1160,6 +1609,7 @@ body.debug-mode::after {
   0% {
     opacity: 0;
   }
+
   100% {
     opacity: 1;
   }
@@ -1167,7 +1617,8 @@ body.debug-mode::after {
 
 /* Mini Projects Dark Mode - only inside the container */
 .mini-projects-viewport-container.dark-mode {
-  background-color: #000000 !important; /* Black when hovered */
+  background-color: #000000 !important;
+  /* Black when hovered */
   transition: background-color 0.4s ease;
 }
 
@@ -1294,14 +1745,16 @@ body.debug-mode::after {
   position: relative;
 
   box-sizing: border-box;
-  overflow: hidden; /* Hide overflow since GSAP handles the movement */
+  overflow: hidden;
+  /* Hide overflow since GSAP handles the movement */
   padding: 40px 0;
 }
 
 .projects-wrapper {
   display: flex;
   align-items: center;
-  gap: 50px; /* Reduced from 100px to 50px (50% reduction) */
+  gap: 50px;
+  /* Reduced from 100px to 50px (50% reduction) */
   will-change: transform;
 
   box-sizing: border-box;
@@ -1313,15 +1766,18 @@ body.debug-mode::after {
 .project-card {
   display: flex;
   flex-direction: column;
-  align-items: flex-start; /* Left align instead of center */
+  align-items: flex-start;
+  /* Left align instead of center */
   position: relative;
   text-decoration: none;
   color: inherit;
 
   box-sizing: border-box;
   padding: 0px;
-  z-index: 10; /* Higher z-index to ensure hover works */
-  cursor: pointer; /* Show it's interactive */
+  z-index: 10;
+  /* Higher z-index to ensure hover works */
+  cursor: pointer;
+  /* Show it's interactive */
   transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   opacity: 1;
   transform: translateY(0) scale(1);
@@ -1362,6 +1818,7 @@ body.debug-mode::after {
     opacity: 0;
     transform: translateX(-50%) translateY(-5px);
   }
+
   to {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
@@ -1407,7 +1864,8 @@ body.debug-mode::after {
 
 /* During horizontal scrolling, allow JavaScript to control opacity for active project only */
 .project-card.scrolling {
-  pointer-events: none !important; /* Non-hoverable during scrolling */
+  pointer-events: none !important;
+  /* Non-hoverable during scrolling */
   transform: translateY(0) scale(1) !important;
   transition: transform 0.15s ease, opacity 0.15s ease !important;
 }
@@ -1417,12 +1875,15 @@ body.debug-mode::after {
   opacity: 1 !important;
   pointer-events: auto !important;
   transform: translateY(0) scale(1) !important;
+  transition: none !important;
+  /* No transition - instant opacity */
 }
 
 /* Show non-centered projects at 30% opacity when one is centered (not during scrolling) - not hoverable */
 .projects-wrapper:has(.project-card.centered) .project-card:not(.centered):not(.scrolling) {
   opacity: 0.3 !important;
-  pointer-events: none !important; /* Not hoverable when at 30% opacity */
+  pointer-events: none !important;
+  /* Not hoverable when at 30% opacity */
   transform: translateY(0) scale(1) !important;
   transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
@@ -1444,8 +1905,10 @@ body.debug-mode::after {
 
 .project-rectangle {
   width: 500px;
-  height: 250px; /* 2:1 aspect ratio (500/250 = 2:1) */
-  margin-bottom: 0; /* Remove any default margin */
+  height: 250px;
+  /* 2:1 aspect ratio (500/250 = 2:1) */
+  margin-bottom: 0;
+  /* Remove any default margin */
 
   box-sizing: border-box;
 }
@@ -1508,23 +1971,140 @@ body.debug-mode::after {
 }
 
 .project-info {
-  text-align: left; /* Left align text instead of center */
+  text-align: left;
+  /* Left align text instead of center */
   max-width: 500px;
-  margin-top: 12px; /* Reduced from 20px to bring closer */
-
+  margin-top: 8px;
+  /* Reduced spacing between thumbnail and title */
+  position: relative;
+  /* For absolute positioning of arrow */
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  /* Space between title and subtitle */
+  margin-left: 4px;
   box-sizing: border-box;
-  padding: 5px;
+  padding-right: clamp(50px, 5vw, 70px);
+  /* Space for arrow on the right */
+}
+
+.project-title-wrapper {
+  display: block;
 }
 
 .project-title {
-  font-size: 16px; /* Reduced from 18px */
-  font-weight: 600; /* Reduced from 800 */
+  font-size: 16px;
+  /* Reduced from 18px */
+  font-weight: 600;
+  /* Reduced from 800 */
   color: #111;
-  margin: 0 0 6px 0; /* Reduced bottom margin */
-  line-height: 1.3; /* Slightly increased for better readability */
+  line-height: 1;
+  /* Slightly increased for better readability */
+  margin: 0;
 
   box-sizing: border-box;
-  padding: 3px;
+}
+
+/* Project Arrow Styles */
+.project-arrow {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  /* Span full height of project-info */
+  display: flex;
+  align-items: center;
+  /* Center arrow vertically within full height */
+  justify-content: center;
+  /* Center arrow horizontally */
+  line-height: 0;
+  box-sizing: border-box;
+  height: 100%;
+  /* Full height of project-info */
+  width: clamp(50px, 5vw, 70px) !important;
+  /* Bigger arrow container */
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.project-arrow-base {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  z-index: 1;
+}
+
+.project-arrow-base .project-arrow-svg-stroke {
+  width: 90% !important;
+  /* Fill 90% of container width */
+  height: auto !important;
+  /* Maintain aspect ratio */
+  max-width: 100%;
+  display: block;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.project-arrow-base .project-arrow-svg-stroke path {
+  fill: none;
+  stroke: #111;
+  stroke-width: 2;
+}
+
+.project-arrow-fill-clip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  clip-path: inset(100% 0% 0% 0%);
+  pointer-events: none;
+  transition: clip-path 0.3s ease-out;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  opacity: 1;
+  transform-origin: center center;
+}
+
+.project-arrow-fill-clip .project-arrow-svg-fill {
+  width: 90% !important;
+  /* Fill 90% of container width */
+  height: auto !important;
+  /* Maintain aspect ratio */
+  max-width: 100%;
+  display: block;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.project-arrow-fill-clip .project-arrow-svg-fill-path {
+  fill: #111;
+  /* Solid black fill */
+}
+
+/* Hover state - arrow fills from bottom */
+.project-card:hover .project-arrow-fill-clip,
+.project-card-link:hover .project-arrow-fill-clip {
+  clip-path: inset(0% 0% 0% 0%) !important;
+}
+
+/* Active/clicked state - keep arrow filled */
+.project-card:active .project-arrow-fill-clip,
+.project-card-link:active .project-arrow-fill-clip {
+  clip-path: inset(0% 0% 0% 0%) !important;
 }
 
 .project-subtitle {
@@ -1535,7 +2115,6 @@ body.debug-mode::after {
   margin: 0;
 
   box-sizing: border-box;
-  padding: 3px;
 }
 
 /* No hover states - static layout only */
@@ -1551,59 +2130,63 @@ body.debug-mode::after {
   .main-projects-title {
     font-size: var(--text-4xl);
   }
-  
+
   .work-summary {
     top: clamp(120px, 16vh, 180px);
     grid-template-columns: 1fr;
     gap: clamp(16px, 3vw, 24px);
     width: auto;
   }
-  
+
   .work-summary-title {
     font-size: var(--text-xs);
     margin-bottom: clamp(6px, 1.5vw, 10px);
   }
-  
+
   .work-summary-list {
     gap: clamp(4px, 1vw, 8px);
   }
-  
+
   .work-summary-list li {
     font-size: var(--text-xs);
     padding-left: clamp(14px, 2vw, 18px);
   }
-  
+
   .projects-track {
     gap: clamp(20px, 5vw, 40px);
   }
-  
+
   .project-rectangle {
     width: clamp(200px, 60vw, 300px);
     height: clamp(150px, 18vh, 250px);
   }
-  
+
   .project-info {
-    margin-top: 8px; /* Even closer on mobile */
+    margin-top: 4px;
+    /* Reduced spacing on mobile */
   }
-  
+
   .project-title {
-    font-size: 14px; /* Smaller on mobile */
-    font-weight: 500; /* Lighter on mobile */
+    font-size: 14px;
+    /* Smaller on mobile */
+    font-weight: 500;
+    /* Lighter on mobile */
   }
-  
+
   .project-subtitle {
-    font-size: 12px; /* Smaller on mobile */
+    font-size: 12px;
+    /* Smaller on mobile */
   }
-  
+
   .project-hover-content {
     flex-direction: column;
     gap: clamp(15px, 3vh, 25px);
   }
-  
+
   .hover-text-box {
     width: clamp(180px, 70vw, 250px);
   }
-  
+
   .hover-box-1,
   .hover-box-2 {
     transform: translateY(0);
@@ -1621,7 +2204,8 @@ body.debug-mode::after {
   flex-direction: column;
 
   box-sizing: border-box;
-  padding-bottom: 0; /* Bottom gutter handled by viewport container */
+  padding-bottom: 0;
+  /* Bottom gutter handled by viewport container */
 }
 
 .mini-projects-header {
@@ -1644,7 +2228,6 @@ body.debug-mode::after {
   line-height: var(--line-height-tight);
 
   box-sizing: border-box;
-  padding: 5px;
 }
 
 .mini-projects-title-second-line {
@@ -1657,7 +2240,8 @@ body.debug-mode::after {
   flex: 1;
   position: relative;
   display: flex;
-  align-items: flex-end; /* Place viewport container near bottom */
+  align-items: flex-end;
+  /* Place viewport container near bottom */
   justify-content: center;
   box-sizing: border-box;
   /* Bottom spacing now comes from the child's margin-bottom (matches side gutters) */
@@ -1665,20 +2249,27 @@ body.debug-mode::after {
 
 /* This is the invisible viewport container - the "purple rectangle" reference */
 .mini-projects-viewport-container {
-  position: absolute; /* Sit within container with explicit gutters */
+  position: absolute;
+  /* Sit within container with explicit gutters */
   left: clamp(12px, 2.5vw, 32px);
   right: clamp(12px, 2.5vw, 32px);
-  bottom: clamp(12px, 2.5vw, 32px); /* Bottom gutter equals side gutters */
-  height: 70vh; /* Adjusted height to fit remaining space */
-  background: transparent !important; /* Ensure transparent by default */
+  bottom: clamp(12px, 2.5vw, 32px);
+  /* Bottom gutter equals side gutters */
+  height: 70vh;
+  /* Adjusted height to fit remaining space */
+  background: transparent !important;
+  /* Ensure transparent by default */
   width: auto;
   margin: 0;
 
   box-sizing: border-box;
   overflow: hidden;
-  z-index: 1; /* Low z-index but visible */
-  pointer-events: none; /* Don't interfere with mouse events */
-  transition: background-color 0.4s ease; /* Smooth transition from center */
+  z-index: 1;
+  /* Low z-index but visible */
+  pointer-events: none;
+  /* Don't interfere with mouse events */
+  transition: background-color 0.4s ease;
+  /* Smooth transition from center */
 }
 
 .mini-projects-track {
@@ -1694,12 +2285,14 @@ body.debug-mode::after {
 
 .mini-projects-wrapper {
   display: flex;
-  gap: 40px; /* Closer spacing between mini project cards */
+  gap: 40px;
+  /* Closer spacing between mini project cards */
   align-items: center;
   height: 100%;
 
   box-sizing: border-box;
-  padding: 0 100px; /* Padding to ensure cards can be centered */
+  padding: 0 100px;
+  /* Padding to ensure cards can be centered */
 }
 
 .mini-project-card {
@@ -1712,10 +2305,14 @@ body.debug-mode::after {
 
   box-sizing: border-box;
   padding: 10px;
-  flex-shrink: 0; /* Prevent cards from shrinking */
-  z-index: 100; /* Much higher z-index to ensure hover works */
-  cursor: pointer; /* Show it's interactive */
-  pointer-events: auto; /* Ensure cards can receive mouse events */
+  flex-shrink: 0;
+  /* Prevent cards from shrinking */
+  z-index: 100;
+  /* Much higher z-index to ensure hover works */
+  cursor: pointer;
+  /* Show it's interactive */
+  pointer-events: auto;
+  /* Ensure cards can receive mouse events */
   transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   opacity: 1;
   transform: translateY(0) scale(1);
@@ -1736,7 +2333,8 @@ body.debug-mode::after {
 
 /* During horizontal scrolling, allow JavaScript to control opacity for active project only */
 .mini-project-card.scrolling {
-  pointer-events: none !important; /* Non-hoverable during scrolling */
+  pointer-events: none !important;
+  /* Non-hoverable during scrolling */
   transform: translateY(0) scale(1) !important;
   transition: transform 0.15s ease, opacity 0.15s ease !important;
 }
@@ -1746,12 +2344,15 @@ body.debug-mode::after {
   opacity: 1 !important;
   pointer-events: auto !important;
   transform: translateY(0) scale(1) !important;
+  transition: none !important;
+  /* No transition - instant opacity */
 }
 
 /* Show non-centered mini projects at 30% opacity when one is centered (not during scrolling) - not hoverable */
 .mini-projects-wrapper:has(.mini-project-card.centered) .mini-project-card:not(.centered):not(.scrolling) {
   opacity: 0.3 !important;
-  pointer-events: none !important; /* Not hoverable when at 30% opacity */
+  pointer-events: none !important;
+  /* Not hoverable when at 30% opacity */
   transform: translateY(0) scale(1) !important;
   transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
@@ -1785,8 +2386,10 @@ body.debug-mode::after {
 }
 
 .mini-project-rectangle {
-  width: 200px; /* 50% smaller - 200px */
-  height: 200px; /* 1:1 aspect ratio - perfect square */
+  width: 200px;
+  /* 50% smaller - 200px */
+  height: 200px;
+  /* 1:1 aspect ratio - perfect square */
 
   box-sizing: border-box;
   /* No rounded corners - removed border-radius */
@@ -1815,8 +2418,9 @@ body.debug-mode::after {
 
 .mini-project-info {
   text-align: center;
-  max-width: 200px; /* Match the new rectangle width */
-  margin-top: 15px;
+  max-width: 200px;
+  /* Match the new rectangle width */
+  margin-top: 8px;
 
   box-sizing: border-box;
   padding: 5px;
@@ -1826,11 +2430,10 @@ body.debug-mode::after {
   font-size: 16px;
   font-weight: 700;
   color: #111;
-  margin: 0 0 6px 0;
+  margin: 0 0 2px 0;
   line-height: 1.2;
 
   box-sizing: border-box;
-  padding: 3px;
 }
 
 .mini-project-subtitle {
@@ -1853,7 +2456,7 @@ body.debug-mode::after {
   .mini-projects-title {
     font-size: var(--text-4xl);
   }
-  
+
   .mini-projects-viewport-container {
     left: clamp(12px, 2.5vw, 32px);
     right: clamp(12px, 2.5vw, 32px);
@@ -1862,17 +2465,19 @@ body.debug-mode::after {
     width: auto;
     margin: 0;
   }
-  
+
   .mini-projects-wrapper {
-    gap: 20px; /* Even closer on mobile */
+    gap: 20px;
+    /* Even closer on mobile */
     padding: 0 50px;
   }
-  
+
   .mini-project-rectangle {
     width: clamp(150px, 40vw, 200px);
-    height: clamp(150px, 40vw, 200px); /* Keep 1:1 aspect ratio on mobile */
+    height: clamp(150px, 40vw, 200px);
+    /* Keep 1:1 aspect ratio on mobile */
   }
-  
+
   .mini-project-info {
     max-width: clamp(150px, 40vw, 200px);
   }
@@ -1885,6 +2490,8 @@ body.debug-mode::after {
   background-color: #f5f5f0;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
+  /* Push contact options to bottom */
   position: relative;
   padding: 0;
   box-sizing: border-box;
@@ -1918,10 +2525,13 @@ body.debug-mode::after {
 
 /* Contact Options Wrapper */
 .contact-options-wrapper {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: clamp(40px, 5vw, 80px) clamp(24px, 5vw, 64px);
+  width: calc(100vw - clamp(24px, 5vw, 64px));
+  margin-left: clamp(12px, 2.5vw, 32px);
+  margin-right: clamp(12px, 2.5vw, 32px);
+  margin-bottom: clamp(12px, 2.5vw, 32px);
+  /* Match left/right global margins */
+  margin-top: auto;
+  /* Push to bottom of flex container */
   box-sizing: border-box;
 }
 
@@ -1944,8 +2554,11 @@ body.debug-mode::after {
   display: grid;
   gap: clamp(8px, 1.8vw, 14px);
   text-align: right;
+  margin-top: clamp(24px, 4vw, 48px);
+  /* Space between kicker and contact links */
   box-sizing: border-box;
 }
+
 /* Keep only the kicker left-aligned */
 .contact-options-kicker {
   justify-self: start;
@@ -1954,7 +2567,7 @@ body.debug-mode::after {
 
 .contact-option-line {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: flex-end;
   gap: clamp(8px, 1.2vw, 16px);
   box-sizing: border-box;
@@ -1999,18 +2612,25 @@ body.debug-mode::after {
 
 .contact-option-line .arrow {
   position: relative;
-  display: flex;
-  align-items: center;
+  display: inline-flex;
+  align-items: flex-end;
   justify-content: center;
+  align-self: flex-end;
+  line-height: 0;
   box-sizing: border-box;
-  height: clamp(40px, 8vw, 80px);
+  height: clamp(35px, 3.5vw, 50px) !important;
+  /* Match about section arrow size exactly */
+  width: clamp(41px, 4.1vw, 58px) !important;
+  /* Match about section arrow size exactly */
   flex-shrink: 0;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 .contact-option-line .icon-base {
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   box-sizing: border-box;
   height: 100%;
@@ -2030,7 +2650,7 @@ body.debug-mode::after {
   transition: clip-path 0.3s ease-out;
   box-sizing: border-box;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
 }
 
@@ -2039,7 +2659,7 @@ body.debug-mode::after {
   width: 100%;
   height: 100%;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
 }
 
@@ -2053,18 +2673,20 @@ body.debug-mode::after {
   width: 100%;
   height: 100%;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   position: relative;
 }
 
 .contact-option-line .morphing-icon svg {
-  width: clamp(60px, 6vw, 80px);
-  height: clamp(50px, 5vw, 70px);
+  width: clamp(41px, 4.1vw, 58px) !important;
+  /* Match about section arrow width exactly */
+  height: clamp(35px, 3.5vw, 50px) !important;
+  /* Match about section arrow height exactly */
   position: absolute;
-  top: 50%;
+  bottom: 0;
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translateX(-50%);
 }
 
 .contact-option-line .morphing-icon svg path {
@@ -2084,6 +2706,23 @@ body.debug-mode::after {
 /* Dark mode arrow SVGs */
 .marquee-contact-section.dark-mode .contact-option-line .arrow svg {
   filter: brightness(0) invert(1);
+}
+
+/* Dark mode arrow SVGs in contact section */
+.marquee-contact-section.dark-mode .arrow-close-widget svg {
+  filter: brightness(0) invert(1);
+}
+
+.marquee-contact-section.dark-mode .arrow-close-widget .arrow-svg-stroke path {
+  stroke: #ffffff !important;
+}
+
+.marquee-contact-section.dark-mode .arrow-close-widget .arrow-svg-fill-path {
+  fill: #ffffff !important;
+}
+
+.marquee-contact-section.dark-mode .arrow-close-close-path {
+  stroke: #ffffff !important;
 }
 
 /* Dark mode PNG images */
@@ -2114,15 +2753,15 @@ body.debug-mode::after {
   .contact-options-header {
     justify-items: start;
   }
-  
+
   .contact-options-title {
     text-align: left;
   }
-  
+
   .contact-option-line {
     justify-content: flex-start;
   }
-  
+
   .marquee-text {
     font-size: clamp(32px, 10vw, 80px);
   }
@@ -2132,7 +2771,8 @@ body.debug-mode::after {
 .contact {
   width: 100vw;
   height: 100vh;
-  background-color: #f0f8e6; /* Light green background */
+  background-color: #f0f8e6;
+  /* Light green background */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2158,13 +2798,42 @@ body.debug-mode::after {
 }
 
 /* Tailwind-like utility classes for TextPressure component */
-.relative { position: relative; }
-.w-full { width: 100%; }
-.h-full { height: 100%; }
-.overflow-hidden { overflow: hidden; }
-.bg-transparent { background-color: transparent; }
-.flex { display: flex; }
-.justify-between { justify-content: space-between; }
-.text-center { text-align: center; }
-.uppercase { text-transform: uppercase; }
-.inline-block { display: inline-block; }
+.relative {
+  position: relative;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.h-full {
+  height: 100%;
+}
+
+.overflow-hidden {
+  overflow: hidden;
+}
+
+.bg-transparent {
+  background-color: transparent;
+}
+
+.flex {
+  display: flex;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.uppercase {
+  text-transform: uppercase;
+}
+
+.inline-block {
+  display: inline-block;
+}
