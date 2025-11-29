@@ -8,8 +8,8 @@ import { ScrollSmoother } from 'gsap/ScrollSmoother';
 import './App.css';
 
 // Import SVG assets for arrow/close widget
-import arrowSvg from './assets/arrow st-2.svg';
-import closeSvg from './assets/close s2.svg';
+import arrowSvg from './assets/arrow.svg';
+import closeSvg from './assets/close.svg';
 
 // Global debug state
 let globalDebugMode = false;
