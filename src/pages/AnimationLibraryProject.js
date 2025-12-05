@@ -12,55 +12,32 @@ const AnimationLibraryProject = () => {
   const imagesRef = useRef([]);
 
   useEffect(() => {
-    // Clean up any existing ScrollTriggers first
     ScrollTrigger.getAll().forEach(trigger => trigger.kill());
 
-    // Reset scroll position with proper null checks and timing
     requestAnimationFrame(() => {
       try {
         window.scrollTo(0, 0);
         if (document && document.documentElement) {
-          try {
-            document.documentElement.scrollTop = 0;
-          } catch (e) {
-            // Ignore if documentElement is null
-          }
+          try { document.documentElement.scrollTop = 0; } catch (e) {}
         }
         if (document && document.body) {
-          try {
-            document.body.scrollTop = 0;
-          } catch (e) {
-            // Ignore if body is null
-          }
+          try { document.body.scrollTop = 0; } catch (e) {}
         }
-      } catch (e) {
-        // Ignore scroll reset errors
-      }
+      } catch (e) {}
     });
 
-    // Hero section animation
     if (heroRef.current) {
       gsap.fromTo(heroRef.current, 
         { opacity: 0, y: 50 },
-        { 
-          opacity: 1, 
-          y: 0, 
-          duration: 1.2, 
-          ease: "power2.out" 
-        }
+        { opacity: 1, y: 0, duration: 1.2, ease: "power2.out" }
       );
     }
 
-    // Content animation
     if (contentRef.current && contentRef.current.children) {
       gsap.fromTo(contentRef.current.children,
         { opacity: 0, y: 30 },
         { 
-          opacity: 1, 
-          y: 0, 
-          duration: 0.8, 
-          stagger: 0.2,
-          ease: "power2.out",
+          opacity: 1, y: 0, duration: 0.8, stagger: 0.2, ease: "power2.out",
           scrollTrigger: {
             trigger: contentRef.current,
             start: "top 80%",
@@ -71,17 +48,12 @@ const AnimationLibraryProject = () => {
       );
     }
 
-    // Image entrance animations
-    imagesRef.current.forEach((img, index) => {
+    imagesRef.current.forEach((img) => {
       if (img) {
         gsap.fromTo(img,
           { opacity: 0, scale: 1.1, y: 50 },
           {
-            opacity: 1,
-            scale: 1,
-            y: 0,
-            duration: 1,
-            ease: "power2.out",
+            opacity: 1, scale: 1, y: 0, duration: 1, ease: "power2.out",
             scrollTrigger: {
               trigger: img,
               start: "top 85%",
@@ -100,239 +72,118 @@ const AnimationLibraryProject = () => {
 
   return (
     <div className="project-page">
-      {/* Navigation */}
       <nav className="project-nav">
-        <Link to="/" className="nav-link">
-          ← Back to Portfolio
-        </Link>
+        <Link to="/" className="nav-link">← Back to Portfolio</Link>
       </nav>
 
-      {/* Hero Section */}
       <section className="project-hero" ref={heroRef}>
         <div className="hero-content">
           <div className="hero-badge">Mini Project</div>
-          <h1 className="hero-title">Quick Study: Animation Library</h1>
+          <h1 className="hero-title">Prism</h1>
           <p className="hero-subtitle">
-            Exploring motion design principles through code and creating reusable animation components
+            A Figma plugin that builds perceptually balanced, sRGB-safe OKLCH color systems with real-time accessibility checks. Designers get cleaner palettes, and developers get synced variables across CSS, Tailwind, React and tokens.
           </p>
           <div className="hero-meta">
-            <span className="meta-item">2023</span>
-            <span className="meta-item">Personal Project</span>
-            <span className="meta-item">Motion Design</span>
+            <span className="meta-item">Figma Plugin</span>
+            <span className="meta-item">Color Systems</span>
+            <span className="meta-item">Design Tools</span>
+          </div>
+          <div style={{ marginTop: '24px' }}>
+            <a 
+              href="https://www.figma.com/community/plugin/1560632211514322267" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              style={{ color: '#111', textDecoration: 'underline', fontSize: '16px', fontFamily: 'var(--font-body)' }}
+            >
+              Click here to view the plugin on the Figma Marketplace
+            </a>
           </div>
         </div>
       </section>
 
-      {/* Main Content */}
       <main className="project-content" ref={contentRef}>
-        {/* Introduction */}
         <section className="content-section">
-          <h2 className="section-title">The Inspiration</h2>
+          <h2 className="section-title">The OKLCH Perfection</h2>
           <div className="section-content">
-            <p className="body-large">
-              Motion design has always fascinated me. The way a well-crafted animation 
-              can guide attention, provide feedback, and create emotional connections 
-              with users is truly powerful.
+            <p className="body-base">
+              For a long time, designers worked with color systems built for computers, not human eyes. RGB came from how monitors mix light, hex codes were just RGB in another format (#RRGGBB), and HSL arrived later as an attempt to make color more intuitive by organizing it into hue, saturation, and lightness. It felt like progress because you could finally adjust brightness/ lightness without completely changing a color's hue.
             </p>
             <p className="body-base">
-              This project started as a way to understand the principles behind 
-              great motion design and evolved into a comprehensive library of 
-              reusable animation components that I use across my projects.
+              But HSL has a fundamental problem: its lightness value measures monitor output, not how bright something actually appears to your eye. Human vision doesn't work linearly. A color at 50% HSL lightness doesn't look halfway between black and white, it may look radically different in a colour like red (low luminosity) and yellow (high luminosity).
+            </p>
+            <p className="body-base">
+              Let's say you create a red palette from 100 to 900 using HSL, spacing the lightness values evenly. Now do the same with yellow. If you convert both to grayscale, the red scale looks relatively balanced, but the yellow scale is a mess. Yellow 500 might look almost as bright as yellow 300, while yellow 700 and 800 are barely distinguishable.
             </p>
           </div>
         </section>
 
-        {/* Hero Image */}
         <div className="image-container" ref={el => imagesRef.current[0] = el}>
-          <img 
-            src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2069&q=80" 
-            alt="Animation Library Interface"
-            className="project-image"
-          />
-          <div className="image-caption">
-            The animation library interface showing various motion components and their configurations
-          </div>
+          <img src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/Prism/Prism%20Image%201.png" alt="HSL Color Scale Comparison" className="project-image" />
         </div>
 
-        {/* Motion Principles */}
         <section className="content-section">
-          <h2 className="section-title">Motion Design Principles</h2>
           <div className="section-content">
             <p className="body-base">
-              I studied the fundamental principles of motion design, focusing on 
-              how timing, easing, and choreography can create meaningful user 
-              experiences. Each animation in the library is built with these 
-              principles in mind.
+              OKLCH solves this by organizing color around perception instead of physics. The L in OKLCH represents perceptual lightness, sometimes called luminosity, which measures how bright something appears to human vision. A value of 50 genuinely looks halfway between black and white. When you create a scale from 0 to 100 in OKLCH, every step appears equally distant regardless of which hue you're working with. Your reds, yellows, blues, and greens all have consistent visual spacing at the same lightness values.
             </p>
-            
-            <div className="principles-grid">
-              <div className="principle-item">
-                <h3 className="heading-6">Timing & Duration</h3>
-                <p className="body-small">
-                  Understanding how duration affects perception and creating 
-                  consistent timing scales across different interactions.
-                </p>
-              </div>
-              <div className="principle-item">
-                <h3 className="heading-6">Easing Functions</h3>
-                <p className="body-small">
-                  Exploring different easing curves to create natural, 
-                  physics-based motion that feels organic and responsive.
-                </p>
-              </div>
-              <div className="principle-item">
-                <h3 className="heading-6">Choreography</h3>
-                <p className="body-small">
-                  Coordinating multiple elements to create cohesive 
-                  animations that guide user attention effectively.
-                </p>
-              </div>
-            </div>
           </div>
         </section>
 
-        {/* Code Examples */}
         <div className="image-container" ref={el => imagesRef.current[1] = el}>
-          <img 
-            src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80" 
-            alt="Animation Code Examples"
-            className="project-image"
-          />
-          <div className="image-caption">
-            Code examples showing the implementation of various animation components
-          </div>
+          <img src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/Prism/Prism%20Image%202.png" alt="OKLCH Color Scale Comparison" className="project-image" />
         </div>
 
-        {/* Technical Implementation */}
         <section className="content-section">
-          <h2 className="section-title">Technical Implementation</h2>
+          <h2 className="section-title">The sRGB Compatibility Problem with OKLCH</h2>
           <div className="section-content">
             <p className="body-base">
-              The library is built using modern web technologies with performance 
-              in mind. Each component is optimized for smooth 60fps animations 
-              across different devices and browsers.
+              Here's where things get problematic. OKLCH can describe colors that don't exist in sRGB, the color space that's been the web standard since the 90s and still covers most displays. When you create a highly saturated color in OKLCH, there's a good chance it falls outside what an sRGB display can actually show.
             </p>
-            
-            <div className="tech-features">
-              <div className="feature-item">
-                <h3 className="heading-6">GSAP Integration</h3>
-                <p className="body-small">
-                  Leveraging GSAP's powerful animation engine for smooth, 
-                  performant animations with advanced easing and timeline controls.
-                </p>
-              </div>
-              <div className="feature-item">
-                <h3 className="heading-6">React Components</h3>
-                <p className="body-small">
-                  Creating reusable React components that can be easily 
-                  integrated into any project with customizable props.
-                </p>
-              </div>
-              <div className="feature-item">
-                <h3 className="heading-6">Performance Optimization</h3>
-                <p className="body-small">
-                  Using transform and opacity properties for hardware-accelerated 
-                  animations and implementing proper cleanup to prevent memory leaks.
-                </p>
-              </div>
-            </div>
+            <p className="body-base">
+              OKLCH enthusiasts will tell you to embrace Display P3, the wider gamut that modern iPhones, MacBooks and some Adobe displays support, and they're not wrong because P3 colors can be genuinely stunning. But most of the web is still on sRGB, and when a P3 color gets displayed on an sRGB screen, browsers clip or desaturate it, so your vibrant blue might render as something completely different.
+            </p>
+            <p className="body-base">
+              This made me wonder if there's a middle ground. What if you could get OKLCH's perceptual uniformity without gambling on display compatibility? That's what Prism does. Instead of generating colors across OKLCH's full range, I constrained it to the sRGB display boundaries and then divided that space using OKLCH's perceptual lightness scale. Every color Prism generates works on any display, but the spacing between tones is calculated for human perception.
+            </p>
           </div>
         </section>
 
-        {/* Animation Showcase */}
         <div className="image-container" ref={el => imagesRef.current[2] = el}>
-          <img 
-            src="https://images.unsplash.com/photo-1551650975-87deedd944c3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2074&q=80" 
-            alt="Animation Showcase"
-            className="project-image"
-          />
-          <div className="image-caption">
-            Interactive showcase demonstrating various animation components in action
-          </div>
+          <img src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/Prism/Prism%20Image%203.png" alt="sRGB Compatibility Solution" className="project-image" />
         </div>
 
-        {/* Library Components */}
         <section className="content-section">
-          <h2 className="section-title">Library Components</h2>
+          <h2 className="section-title">Simple UI - For Designers, Coders and Project Managers</h2>
           <div className="section-content">
             <p className="body-base">
-              The library includes a comprehensive set of animation components 
-              covering common UI patterns and interactions. Each component is 
-              documented with examples and customization options.
+              I built Prism to feel straightforward. The first screen is just color selection where you pick your primary, secondary, and tertiary colors, and the plugin immediately generates complete scales plus a neutral palette subtly tinted with your primary. The second screen lets you fine-tune curves and settings if you want, but the defaults work well so you can skip it entirely. The third screen is export with every format you might need.
             </p>
-            
-            <div className="components-list">
-              <div className="component-item">
-                <h3 className="heading-6">Fade Animations</h3>
-                <p className="body-small">Smooth opacity transitions for content reveals and state changes</p>
-              </div>
-              <div className="component-item">
-                <h3 className="heading-6">Slide Animations</h3>
-                <p className="body-small">Directional movement animations for navigation and content transitions</p>
-              </div>
-              <div className="component-item">
-                <h3 className="heading-6">Scale Animations</h3>
-                <p className="body-small">Size-based animations for buttons, cards, and interactive elements</p>
-              </div>
-              <div className="component-item">
-                <h3 className="heading-6">Stagger Animations</h3>
-                <p className="body-small">Sequential animations for lists, grids, and grouped content</p>
-              </div>
-            </div>
+            <p className="body-base">
+              While you work, contrast ratios update in real time and Prism checks every color combination against WCAG 2.2 and APCA standards automatically. If a pairing fails accessibility requirements, you see it immediately with suggested alternatives, so there are no surprises during handoff or QA.
+            </p>
           </div>
         </section>
 
-        {/* Results */}
+        <div className="image-container" ref={el => imagesRef.current[3] = el}>
+          <img src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/Prism/Prism%20Image%204.png" alt="Prism UI Interface" className="project-image" />
+        </div>
+
         <section className="content-section">
-          <h2 className="section-title">Impact & Usage</h2>
+          <h2 className="section-title">Multi-format exports</h2>
           <div className="section-content">
             <p className="body-base">
-              The animation library has become an essential tool in my development 
-              workflow, significantly improving the quality and consistency of 
-              animations across all my projects.
+              The typical workflow has designers maintaining colors in Figma while developers maintain a separate system in code, and they drift apart over time. Prism fixes this by exporting the same palette in formats for both. Designers get Figma Variables with semantic naming and automatic light/dark modes, plus a visual moodboard if you prefer seeing everything on canvas. Developers get CSS Variables, Tailwind configs, React theme objects, and W3C Design Tokens in JSON. Same colors, different formats, so everyone works from a single source of colours and the production colors match the designs exactly.
             </p>
-            
-            <div className="usage-stats">
-              <div className="stat-item">
-                <h3 className="heading-6">Development Speed</h3>
-                <p className="body-small">70% faster animation implementation</p>
-              </div>
-              <div className="stat-item">
-                <h3 className="heading-6">Consistency</h3>
-                <p className="body-small">Unified animation language across projects</p>
-              </div>
-              <div className="stat-item">
-                <h3 className="heading-6">Performance</h3>
-                <p className="body-small">60fps animations on all target devices</p>
-              </div>
-            </div>
           </div>
         </section>
 
-        {/* Conclusion */}
-        <section className="content-section">
-          <h2 className="section-title">Key Learnings</h2>
-          <div className="section-content">
-            <p className="body-large">
-              This project deepened my understanding of motion design and its 
-              impact on user experience. It taught me that great animations 
-              aren't just decorative—they're functional tools that enhance usability.
-            </p>
-            <p className="body-base">
-              The most valuable lesson was learning to balance creativity with 
-              performance. Every animation decision must consider both the 
-              emotional impact and the technical constraints of the platform. 
-              This library represents that balance—beautiful, functional, and performant.
-            </p>
-          </div>
-        </section>
+        <div className="image-container" ref={el => imagesRef.current[4] = el}>
+          <img src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/Prism/Prism%20Image%205.png" alt="Multi-format Export Options" className="project-image" />
+        </div>
       </main>
 
-      {/* Footer */}
       <footer className="project-footer">
-        <Link to="/" className="footer-link">
-          ← Back to Portfolio
-        </Link>
+        <Link to="/" className="footer-link">← Back to Portfolio</Link>
       </footer>
     </div>
   );

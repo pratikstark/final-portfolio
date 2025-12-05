@@ -74,46 +74,6 @@ function ScrollReset() {
   return null;
 }
 
-// Wrapper component that ensures cleanup before unmounting
-function RouteWrapper({ children }) {
-  const location = useLocation();
-  
-  useLayoutEffect(() => {
-    // Cleanup function runs when route changes or component unmounts
-    return () => {
-      // Kill ALL ScrollTriggers before React unmounts
-      try {
-        const allTriggers = ScrollTrigger.getAll();
-        allTriggers.forEach(trigger => {
-          try {
-            trigger.kill();
-          } catch (e) {
-            // Ignore
-          }
-        });
-        ScrollTrigger.refresh();
-        gsap.killTweensOf("*");
-        
-        // Remove any pin spacers
-        const pinSpacers = document.querySelectorAll('[data-pin-spacer]');
-        pinSpacers.forEach(spacer => {
-          try {
-            if (spacer && spacer.parentNode && spacer.isConnected) {
-              spacer.remove();
-            }
-          } catch (e) {
-            // Ignore
-          }
-        });
-      } catch (e) {
-        // Ignore
-      }
-    };
-  }, [location.pathname]);
-  
-  return children;
-}
-
 // Routes component with key that forces complete remount on route change
 function AppRoutes() {
   const location = useLocation();
@@ -148,4 +108,3 @@ function App() {
 }
 
 export default App;
-

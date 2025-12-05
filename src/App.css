@@ -1630,6 +1630,10 @@ body.debug-mode::after {
   color: #cccccc;
 }
 
+.mini-projects-viewport-container.dark-mode .mini-project-body {
+  color: #e0e0e0;
+}
+
 .main-projects-header {
   position: absolute;
   top: 40px;
@@ -2263,7 +2267,8 @@ body.debug-mode::after {
   margin: 0;
 
   box-sizing: border-box;
-  overflow: hidden;
+  overflow: visible;
+  /* Allow body text to extend below */
   z-index: 1;
   /* Low z-index but visible */
   pointer-events: none;
@@ -2279,8 +2284,11 @@ body.debug-mode::after {
   align-items: center;
   justify-content: flex-start;
   position: relative;
-
+  overflow: visible;
+  /* Allow body text to extend below */
   box-sizing: border-box;
+  transform: translateY(-30px);
+  /* Shift up to account for body text below, centering the whole group */
 }
 
 .mini-projects-wrapper {
@@ -2390,9 +2398,19 @@ body.debug-mode::after {
   /* 50% smaller - 200px */
   height: 200px;
   /* 1:1 aspect ratio - perfect square */
-
+  display: flex;
+  align-items: center;
+  justify-content: center;
   box-sizing: border-box;
   /* No rounded corners - removed border-radius */
+  overflow: hidden;
+}
+
+.mini-project-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 /* Mini Project Color Variants */
@@ -2420,7 +2438,7 @@ body.debug-mode::after {
   text-align: center;
   max-width: 200px;
   /* Match the new rectangle width */
-  margin-top: 8px;
+  margin-top: 6px;
 
   box-sizing: border-box;
   padding: 5px;
@@ -2437,14 +2455,47 @@ body.debug-mode::after {
 }
 
 .mini-project-subtitle {
+  font-family: var(--font-body);
   font-size: 14px;
   color: #666;
   margin: 0;
-  line-height: 1.3;
+  line-height: 1.4;
   font-weight: 400;
 
   box-sizing: border-box;
   padding: 3px;
+}
+
+.mini-project-body {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: #333;
+  margin: 0;
+  margin-top: 12px;
+  line-height: 1.6;
+  font-weight: 400;
+  text-align: center;
+  width: 650px;
+  max-width: 90vw;
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  transition: opacity 0.3s ease, max-height 0.3s ease;
+  box-sizing: border-box;
+  padding: 0;
+  pointer-events: none;
+  white-space: normal;
+}
+
+/* Show body text when card is hovered */
+.mini-project-card.hovered .mini-project-body,
+.mini-project-card:hover .mini-project-body {
+  opacity: 1;
+  max-height: 180px;
 }
 
 /* Responsive Design for Mini Projects */
@@ -2480,6 +2531,13 @@ body.debug-mode::after {
 
   .mini-project-info {
     max-width: clamp(150px, 40vw, 200px);
+  }
+
+  .mini-project-body {
+    font-size: 14px;
+    width: clamp(280px, 85vw, 650px);
+    max-height: 120px;
+    margin-top: 10px;
   }
 }
 

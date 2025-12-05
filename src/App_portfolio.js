@@ -4076,11 +4076,18 @@ function PortfolioApp() {
                     }
                   }}
                 >
-                  <div className="mini-project-rectangle"></div>
+                  <div className="mini-project-rectangle">
+                    <img 
+                      src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/Prism/Prism%20Logo.png" 
+                      alt="Prism Logo" 
+                      className="mini-project-image"
+                    />
+                  </div>
                   <div className="mini-project-info">
                     <h3 className="mini-project-title">Prism</h3>
                     <p className="mini-project-subtitle">Figma Plugin</p>
                   </div>
+                  <p className="mini-project-body">A Figma plugin that builds perceptually balanced, sRGB-safe OKLCH color systems with real-time accessibility checks. Designers get cleaner palettes, and developers get synced variables across CSS, Tailwind, React and tokens.</p>
                 </Link>
 
                 <Link
@@ -4110,6 +4117,7 @@ function PortfolioApp() {
                     <h3 className="mini-project-title">Jarvis Assistant</h3>
                     <p className="mini-project-subtitle">Self hosted deployable AI</p>
                   </div>
+                  <p className="mini-project-body">An intelligent AI assistant that can be self-hosted and deployed on your own infrastructure. Built with privacy and customization in mind, offering full control over your AI interactions.</p>
                 </Link>
 
                 <Link
@@ -4139,6 +4147,7 @@ function PortfolioApp() {
                     <h3 className="mini-project-title">Bloom Bakehouse</h3>
                     <p className="mini-project-subtitle">Cafe Design Project</p>
                   </div>
+                  <p className="mini-project-body">A complete cafe design project featuring modern UI/UX principles. Includes branding, menu design, and digital ordering system with a focus on user experience and visual appeal.</p>
                 </Link>
 
                 <Link
@@ -4168,6 +4177,7 @@ function PortfolioApp() {
                     <h3 className="mini-project-title">Conscious Living</h3>
                     <p className="mini-project-subtitle">Spearheading Online Sales</p>
                   </div>
+                  <p className="mini-project-body">A strategic e-commerce redesign that transformed online sales performance. Focused on conversion optimization, user journey mapping, and creating an intuitive shopping experience.</p>
                 </Link>
               </div>
             </div>
