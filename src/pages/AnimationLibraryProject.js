@@ -10,21 +10,44 @@ const AnimationLibraryProject = () => {
   const heroRef = useRef(null);
   const contentRef = useRef(null);
   const imagesRef = useRef([]);
+  const containerRef = useRef(null);
+  const scrollTriggersRef = useRef([]);
 
   useEffect(() => {
-    ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+    // Check if component is inside an overlay - use setTimeout to ensure ref is set
+    let isInOverlay = false;
+    const checkOverlay = () => {
+      isInOverlay = containerRef.current?.closest('.project-overlay') !== null || 
+                    document.querySelector('.project-overlay') !== null;
+    };
+    
+    // Check immediately and after a small delay
+    checkOverlay();
+    setTimeout(checkOverlay, 0);
+    
+    // Only kill all triggers if NOT in overlay (navigating to page directly)
+    // When in overlay, we don't want to interfere with main page triggers
+    if (!isInOverlay) {
+      ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+    }
 
-    requestAnimationFrame(() => {
-      try {
-        window.scrollTo(0, 0);
-        if (document && document.documentElement) {
-          try { document.documentElement.scrollTop = 0; } catch (e) {}
-        }
-        if (document && document.body) {
-          try { document.body.scrollTop = 0; } catch (e) {}
-        }
-      } catch (e) {}
-    });
+    // Only reset window scroll if NOT in overlay (i.e., navigating to page directly)
+    if (!isInOverlay) {
+      requestAnimationFrame(() => {
+        try {
+          window.scrollTo(0, 0);
+          if (document && document.documentElement) {
+            try { document.documentElement.scrollTop = 0; } catch (e) {}
+          }
+          if (document && document.body) {
+            try { document.body.scrollTop = 0; } catch (e) {}
+          }
+        } catch (e) {}
+      });
+    }
+
+    // Store references to triggers we create so we can clean them up properly
+    const createdTriggers = [];
 
     if (heroRef.current) {
       gsap.fromTo(heroRef.current, 
@@ -34,44 +57,68 @@ const AnimationLibraryProject = () => {
     }
 
     if (contentRef.current && contentRef.current.children) {
-      gsap.fromTo(contentRef.current.children,
+      const scrollTriggerConfig = {
+        trigger: contentRef.current,
+        start: "top 80%",
+        end: "bottom 20%",
+        toggleActions: "play none none reverse",
+        id: "prism-content-trigger"
+      };
+      
+      const animation = gsap.fromTo(contentRef.current.children,
         { opacity: 0, y: 30 },
         { 
           opacity: 1, y: 0, duration: 0.8, stagger: 0.2, ease: "power2.out",
-          scrollTrigger: {
-            trigger: contentRef.current,
-            start: "top 80%",
-            end: "bottom 20%",
-            toggleActions: "play none none reverse"
-          }
+          scrollTrigger: scrollTriggerConfig
         }
       );
+      
+      // Get the trigger using the id
+      const trigger = ScrollTrigger.getById("prism-content-trigger");
+      if (trigger) createdTriggers.push(trigger);
     }
 
-    imagesRef.current.forEach((img) => {
+    imagesRef.current.forEach((img, index) => {
       if (img) {
-        gsap.fromTo(img,
+        const triggerId = `prism-image-trigger-${index}`;
+        const scrollTriggerConfig = {
+          trigger: img,
+          start: "top 85%",
+          end: "bottom 15%",
+          toggleActions: "play none none reverse",
+          id: triggerId
+        };
+        
+        const animation = gsap.fromTo(img,
           { opacity: 0, scale: 1.1, y: 50 },
           {
             opacity: 1, scale: 1, y: 0, duration: 1, ease: "power2.out",
-            scrollTrigger: {
-              trigger: img,
-              start: "top 85%",
-              end: "bottom 15%",
-              toggleActions: "play none none reverse"
-            }
+            scrollTrigger: scrollTriggerConfig
           }
         );
+        
+        // Get the trigger using the id
+        const trigger = ScrollTrigger.getById(triggerId);
+        if (trigger) createdTriggers.push(trigger);
       }
     });
 
+    // Store triggers for cleanup
+    scrollTriggersRef.current = createdTriggers;
+
     return () => {
-      ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+      // Only kill the triggers we created, not all triggers on the page
+      scrollTriggersRef.current.forEach(trigger => {
+        if (trigger && trigger.kill) {
+          trigger.kill();
+        }
+      });
+      scrollTriggersRef.current = [];
     };
   }, []);
 
   return (
-    <div className="project-page">
+    <div className="project-page" ref={containerRef}>
       <nav className="project-nav">
         <Link to="/" className="nav-link">← Back to Portfolio</Link>
       </nav>

@@ -572,6 +572,73 @@ body:has(.main-projects.dark-mode) .custom-cursor {
 }
 
 /* Invert cursor label colors in dark mode */
+/* Page-wide dark mode when last mini project is hovered */
+body.page-dark-mode {
+  background-color: #000 !important;
+  color: #fff !important;
+  transition: background-color 0.8s ease, color 0.8s ease !important;
+}
+
+body.page-dark-mode .mini-projects {
+  background-color: #000000 !important;
+  transition: background-color 0.8s ease !important;
+}
+
+body.page-dark-mode .about {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  transition: background-color 0.8s ease, color 0.8s ease !important;
+}
+
+body.page-dark-mode .marquee-contact-section {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  transition: background-color 0.8s ease, color 0.8s ease !important;
+}
+
+body.page-dark-mode .marquee-text {
+  color: #ffffff !important;
+  transition: color 0.8s ease !important;
+}
+
+body.page-dark-mode .contact-options-kicker,
+body.page-dark-mode .contact-options-kicker-text {
+  color: #ffffff !important;
+  transition: color 0.8s ease !important;
+}
+
+body.page-dark-mode .marquee-contact-section .category-svg img {
+  filter: brightness(0) invert(1) !important;
+  transition: filter 0.8s ease !important;
+}
+
+body.page-dark-mode .custom-cursor,
+body.page-dark-mode .cursor-trail {
+  z-index: 10000 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+body.page-dark-mode .cursor-trail {
+  border-color: #ffffff !important;
+  background-color: transparent !important;
+}
+
+body.page-dark-mode .custom-cursor {
+  background-color: #ffffff !important;
+  mix-blend-mode: normal !important;
+}
+
+body.page-dark-mode .cursor-label {
+  color: #ffffff !important;
+  background-color: transparent !important;
+}
+
+body.page-dark-mode .cursor-trail.magnetic-rectangle,
+body.page-dark-mode .cursor-trail.magnetic-square {
+  border-color: #ffffff !important;
+}
+
 body:has(.main-projects.dark-mode) .cursor-label {
   background: #fff !important;
   color: #000 !important;
@@ -717,6 +784,7 @@ body:has(.main-projects.dark-mode) .cursor-trail.magnetic-square {
   /* One viewport height to avoid excessive space */
   background: #f5f5f0;
   /* Unified background */
+  transition: background-color 0.8s ease, color 0.8s ease;
   box-sizing: border-box;
   overflow: visible;
   /* Don't crop content */
@@ -1490,6 +1558,16 @@ body.debug-mode::after {
 .detail-body u {
   text-decoration: underline;
   /* Underlined text */
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.detail-body u:hover {
+  opacity: 0.7;
+}
+
+.detail-body u[data-project] {
+  cursor: pointer;
 }
 
 @media (max-width: 900px) {
@@ -1582,7 +1660,7 @@ body.debug-mode::after {
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: 1;
+  z-index: 0;
   pointer-events: none;
 }
 
@@ -1926,13 +2004,15 @@ body.debug-mode::after {
   will-change: contents;
 }
 
-.red-project .project-rectangle .project-thumbnail {
+.red-project .project-rectangle .project-thumbnail,
+.green-project .project-rectangle .project-thumbnail,
+.blue-project .project-rectangle .project-thumbnail {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   /* Use GPU-accelerated properties for smooth performance */
   transform: translateZ(0);
   backface-visibility: hidden;
@@ -1943,35 +2023,51 @@ body.debug-mode::after {
   display: block;
 }
 
-.red-project .project-rectangle .project-thumbnail-base {
+.red-project .project-rectangle .project-thumbnail-base,
+.green-project .project-rectangle .project-thumbnail-base,
+.blue-project .project-rectangle .project-thumbnail-base {
   opacity: 1;
   transition: opacity 0.2s ease-out;
   z-index: 1;
 }
 
-.red-project .project-rectangle .project-thumbnail-hover {
+.red-project .project-rectangle .project-thumbnail-hover,
+.green-project .project-rectangle .project-thumbnail-hover,
+.blue-project .project-rectangle .project-thumbnail-hover {
   opacity: 0;
   transition: opacity 0.2s ease-out;
-  z-index: 2;
+  z-index: 10;
 }
 
 /* When hovered, show hover image and hide base image */
-.red-project.hovered .project-rectangle .project-thumbnail-base {
+.red-project.hovered .project-rectangle .project-thumbnail-base,
+.green-project.hovered .project-rectangle .project-thumbnail-base,
+.blue-project.hovered .project-rectangle .project-thumbnail-base {
   opacity: 0 !important;
 }
 
-.red-project.hovered .project-rectangle .project-thumbnail-hover {
+.red-project.hovered .project-rectangle .project-thumbnail-hover,
+.green-project.hovered .project-rectangle .project-thumbnail-hover,
+.blue-project.hovered .project-rectangle .project-thumbnail-hover {
   opacity: 1 !important;
 }
 
 .green-project .project-rectangle {
-  background-color: #00ff00;
-
+  background-color: transparent;
+  position: relative;
+  overflow: hidden;
+  /* Optimize for GPU acceleration */
+  transform: translateZ(0);
+  will-change: contents;
 }
 
 .blue-project .project-rectangle {
-  background-color: #0000ff;
-
+  background-color: transparent;
+  position: relative;
+  overflow: hidden;
+  /* Optimize for GPU acceleration */
+  transform: translateZ(0);
+  will-change: contents;
 }
 
 .project-info {
@@ -2206,7 +2302,7 @@ body.debug-mode::after {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-
+  transition: background-color 0.8s ease;
   box-sizing: border-box;
   padding-bottom: 0;
   /* Bottom gutter handled by viewport container */
@@ -2415,23 +2511,19 @@ body.debug-mode::after {
 
 /* Mini Project Color Variants */
 .purple-project .mini-project-rectangle {
-  background-color: #8B5CF6;
-
+  background-color: #E6E6E6 !important;
 }
 
 .orange-project .mini-project-rectangle {
-  background-color: #F97316;
-
+  background-color: #76E2E4 !important;
 }
 
 .teal-project .mini-project-rectangle {
-  background-color: #14B8A6;
-
+  background-color: #EBDCC9 !important;
 }
 
 .yellow-project .mini-project-rectangle {
-  background-color: #EAB308;
-
+  background-color: #013301 !important;
 }
 
 .mini-project-info {
@@ -2894,4 +2986,119 @@ body.debug-mode::after {
 
 .inline-block {
   display: inline-block;
+}
+
+/* Project Overlay Styles */
+.project-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  box-sizing: border-box;
+  overflow-y: auto;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.project-overlay-content {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background-color: #f5f5f0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s ease;
+  box-sizing: border-box;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.project-overlay-close {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  width: 48px;
+  height: 48px;
+  border: none;
+  background-color: #f5f5f0;
+  border-radius: 50%;
+  font-size: 32px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #111;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  font-family: var(--font-body);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.project-overlay-close:hover {
+  background-color: #e8e8e3;
+  transform: scale(1.05);
+}
+
+.project-overlay-close:active {
+  transform: scale(0.95);
+}
+
+.project-overlay-inner {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.project-overlay-inner .project-page {
+  padding: 0;
+  margin: 0;
+  min-height: 100%;
+}
+
+.project-overlay-inner .project-nav,
+.project-overlay-inner .project-footer {
+  display: none;
+}
+
+/* Responsive adjustments for overlay */
+@media (max-width: 768px) {
+  .project-overlay {
+    padding: 0;
+  }
+  
+  .project-overlay-close {
+    top: 10px;
+    right: 10px;
+    width: 36px;
+    height: 36px;
+    font-size: 24px;
+  }
 }

@@ -10,326 +10,214 @@ const MobileAppProject = () => {
   const heroRef = useRef(null);
   const contentRef = useRef(null);
   const imagesRef = useRef([]);
+  const containerRef = useRef(null);
+  const scrollTriggersRef = useRef([]);
 
   useEffect(() => {
-    // Clean up any existing ScrollTriggers first
-    ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+    let isInOverlay = false;
+    const checkOverlay = () => {
+      isInOverlay = containerRef.current?.closest('.project-overlay') !== null || 
+                    document.querySelector('.project-overlay') !== null;
+    };
+    
+    checkOverlay();
+    setTimeout(checkOverlay, 0);
+    
+    if (!isInOverlay) {
+      ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+    }
 
-    // Reset scroll position with proper null checks and timing
-    requestAnimationFrame(() => {
-      try {
-        window.scrollTo(0, 0);
-        if (document && document.documentElement) {
-          try {
-            document.documentElement.scrollTop = 0;
-          } catch (e) {
-            // Ignore if documentElement is null
+    if (!isInOverlay) {
+      requestAnimationFrame(() => {
+        try {
+          window.scrollTo(0, 0);
+          if (document && document.documentElement) {
+            try { document.documentElement.scrollTop = 0; } catch (e) {}
           }
-        }
-        if (document && document.body) {
-          try {
-            document.body.scrollTop = 0;
-          } catch (e) {
-            // Ignore if body is null
+          if (document && document.body) {
+            try { document.body.scrollTop = 0; } catch (e) {}
           }
-        }
-      } catch (e) {
-        // Ignore scroll reset errors
-      }
-    });
+        } catch (e) {}
+      });
+    }
 
-    // Hero section animation
+    const createdTriggers = [];
+
     if (heroRef.current) {
       gsap.fromTo(heroRef.current, 
         { opacity: 0, y: 50 },
-        { 
-          opacity: 1, 
-          y: 0, 
-          duration: 1.2, 
-          ease: "power2.out" 
-        }
+        { opacity: 1, y: 0, duration: 1.2, ease: "power2.out" }
       );
     }
 
-    // Content animation
     if (contentRef.current && contentRef.current.children) {
-      gsap.fromTo(contentRef.current.children,
+      const scrollTriggerConfig = {
+        trigger: contentRef.current,
+        start: "top 80%",
+        end: "bottom 20%",
+        toggleActions: "play none none reverse",
+        id: "bloom-content-trigger"
+      };
+      
+      const animation = gsap.fromTo(contentRef.current.children,
         { opacity: 0, y: 30 },
         { 
-          opacity: 1, 
-          y: 0, 
-          duration: 0.8, 
-          stagger: 0.2,
-          ease: "power2.out",
-          scrollTrigger: {
-            trigger: contentRef.current,
-            start: "top 80%",
-            end: "bottom 20%",
-            toggleActions: "play none none reverse"
-          }
+          opacity: 1, y: 0, duration: 0.8, stagger: 0.2, ease: "power2.out",
+          scrollTrigger: scrollTriggerConfig
         }
       );
+      
+      const trigger = ScrollTrigger.getById("bloom-content-trigger");
+      if (trigger) createdTriggers.push(trigger);
     }
 
-    // Image entrance animations
     imagesRef.current.forEach((img, index) => {
       if (img) {
-        gsap.fromTo(img,
+        const triggerId = `bloom-image-trigger-${index}`;
+        const scrollTriggerConfig = {
+          trigger: img,
+          start: "top 85%",
+          end: "bottom 15%",
+          toggleActions: "play none none reverse",
+          id: triggerId
+        };
+        
+        const animation = gsap.fromTo(img,
           { opacity: 0, scale: 1.1, y: 50 },
           {
-            opacity: 1,
-            scale: 1,
-            y: 0,
-            duration: 1,
-            ease: "power2.out",
-            scrollTrigger: {
-              trigger: img,
-              start: "top 85%",
-              end: "bottom 15%",
-              toggleActions: "play none none reverse"
-            }
+            opacity: 1, scale: 1, y: 0, duration: 1, ease: "power2.out",
+            scrollTrigger: scrollTriggerConfig
           }
         );
+        
+        const trigger = ScrollTrigger.getById(triggerId);
+        if (trigger) createdTriggers.push(trigger);
       }
     });
 
+    scrollTriggersRef.current = createdTriggers;
+
     return () => {
-      ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+      scrollTriggersRef.current.forEach(trigger => {
+        if (trigger && trigger.kill) {
+          trigger.kill();
+        }
+      });
+      scrollTriggersRef.current = [];
     };
   }, []);
 
   return (
-    <div className="project-page">
-      {/* Navigation */}
+    <div className="project-page" ref={containerRef}>
       <nav className="project-nav">
-        <Link to="/" className="nav-link">
-          ← Back to Portfolio
-        </Link>
+        <Link to="/" className="nav-link">← Back to Portfolio</Link>
       </nav>
 
-      {/* Hero Section */}
       <section className="project-hero" ref={heroRef}>
         <div className="hero-content">
           <div className="hero-badge">Mini Project</div>
-          <h1 className="hero-title">Mobile App Prototype</h1>
+          <h1 className="hero-title">Bloom Bakehouse</h1>
           <p className="hero-subtitle">
-            Rapid prototyping with React Native focusing on gesture interactions and native performance
+            Somewhere around 2018, every bakery started looking the same. A peachy palette and a serif font that was very standardised. Instagram turned bakeries into content studios that sold bread. The aesthetic worked until it was popularised. When everything signals premium through identical visual language, it loses it's essence.
           </p>
           <div className="hero-meta">
-            <span className="meta-item">2023</span>
-            <span className="meta-item">Personal Project</span>
-            <span className="meta-item">Mobile Development</span>
+            <span className="meta-item">Branding</span>
+            <span className="meta-item">Packaging Design</span>
+            <span className="meta-item">Tier-3 Market</span>
           </div>
         </div>
       </section>
 
-      {/* Main Content */}
       <main className="project-content" ref={contentRef}>
-        {/* Introduction */}
         <section className="content-section">
-          <h2 className="section-title">The Approach</h2>
           <div className="section-content">
-            <p className="body-large">
-              Mobile app development requires a different mindset than web development. 
-              Touch interactions, gesture recognition, and platform-specific patterns 
-              create unique challenges and opportunities for user experience design.
-            </p>
             <p className="body-base">
-              This project explores rapid prototyping techniques using React Native, 
-              focusing on creating native-feeling interactions while maintaining 
-              development speed and code reusability across platforms.
+              I watched this saturation happen in real-time across tier 1 cities like Mumbai, Bangalore, Delhi. By 2023, you could walk into any modern bakery in a tier-1 city, and know exactly what you'd see: pastel walls, marble counters and a specific shade of dusty rose on the packaging. The design had become a boring monotonous template.
             </p>
           </div>
         </section>
 
-        {/* Hero Image */}
+        <section className="content-section">
+          <h2 className="section-title">The Colour Palette</h2>
+          <div className="section-content">
+            <p className="body-base">
+              My client wanted a bakery brand for a tier-3 city. They wanted to start a sourdough and cheesecake selling business in Jharkhand. Tier-3 cities have an interesting relationship with city aesthetics and they're simultaneously attracted to and skeptical of them. Copy the tier-1 playbook too well and you're the overpriced outsider. However, go too rustic or traditional, and you've failed to justify why your sourdough costs three times than that of a regular local bread. The design needed to balance the tension between these two extremes.
+            </p>
+            <p className="body-base">
+              Every point of saturation carries cultural meaning, and in 2024, pastel based bakery branding was too common. I chose deep forest green as the primary color because it suggests seriousness with hospitality. Green in food contexts triggers associations with freshness, natural ingredients, and plants. It's the color of things that grow slowly and require patience. It was perfect for sourdough and for the nativity of the origin of the bakery. The mustard yellow is the Platonic ideal of baked goods as it associates with crust, butter, yolk, the Maillard reaction.
+            </p>
+          </div>
+        </section>
+
         <div className="image-container" ref={el => imagesRef.current[0] = el}>
           <img 
-            src="https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80" 
-            alt="Mobile App Interface"
+            src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/Bloom/iPad%20Pro%2012.9_%20-%202.png" 
+            alt="Bloom Color Palette"
             className="project-image"
           />
-          <div className="image-caption">
-            Mobile app interface showing gesture-based navigation and native UI components
-          </div>
         </div>
 
-        {/* Mobile-First Design */}
         <section className="content-section">
-          <h2 className="section-title">Mobile-First Design</h2>
           <div className="section-content">
             <p className="body-base">
-              Mobile design isn't just about making things smaller—it's about 
-              rethinking interactions for touch interfaces and constrained screen space. 
-              Every element must serve a clear purpose and be easily accessible.
+              Beige and blush functioned as the negative space. But these weren't pastels, rather they were stone colors, the palette of flour, linen and paper bags. This was intended to be materials that funnelled the crust and the freshness.
             </p>
-            
-            <div className="principles-grid">
-              <div className="principle-item">
-                <h3 className="heading-6">Touch Targets</h3>
-                <p className="body-small">
-                  Ensuring all interactive elements meet minimum size requirements 
-                  for comfortable touch interaction across different devices.
-                </p>
-              </div>
-              <div className="principle-item">
-                <h3 className="heading-6">Gesture Recognition</h3>
-                <p className="body-small">
-                  Implementing intuitive gestures like swipe, pinch, and long-press 
-                  to create natural interaction patterns.
-                </p>
-              </div>
-              <div className="principle-item">
-                <h3 className="heading-6">Performance</h3>
-                <p className="body-small">
-                  Optimizing for 60fps animations and smooth scrolling to create 
-                  native-feeling experiences.
-                </p>
-              </div>
-            </div>
           </div>
         </section>
 
-        {/* React Native Implementation */}
+        <section className="content-section">
+          <h2 className="section-title">Branding with Recall</h2>
+          <div className="section-content">
+            <p className="body-base">
+              Most bakeries use wheat symbols or generic minimalism. Neither creates recognition or meaning. I chose the sunflower because it does several things at once. It feels warm, looks handcrafted without feeling amateur, and it connects naturally to ideas of nourishment. It is also unique enough to work as a standalone mark, which is important in tier-3 markets where visual clutter is extremely high and memory recall is everything.
+            </p>
+            <p className="body-base">
+              The identity gives customers permission to pay higher prices because it communicates quality without feeling exclusive. A good sourdough at a higher price feels fair when the design reflects the care behind the product. The same bread in generic packaging feels overpriced. The brand helps the business justify value honestly.
+            </p>
+          </div>
+        </section>
+
         <div className="image-container" ref={el => imagesRef.current[1] = el}>
           <img 
-            src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80" 
-            alt="React Native Code Structure"
+            src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/Bloom/iPad%20Pro%2012.9_%20-%204.png" 
+            alt="Bloom Branding"
             className="project-image"
           />
-          <div className="image-caption">
-            React Native code structure showing component architecture and navigation setup
-          </div>
         </div>
 
-        {/* Technical Features */}
         <section className="content-section">
-          <h2 className="section-title">Technical Features</h2>
           <div className="section-content">
             <p className="body-base">
-              The prototype demonstrates key mobile development concepts including 
-              navigation patterns, state management, and platform-specific optimizations.
+              I avoided the pastel, ultra-minimal bakery trend because it does not translate well outside large cities. It is expensive to execute, depends on a certain kind of visual literacy, and often feels copied rather than contextual. Bloom feels contemporary, but it also feels stable enough to last. This is important in tier-3 India where loyalty comes from repeat visits and word of mouth, not from aesthetic trends alone.
             </p>
-            
-            <div className="components-list">
-              <div className="component-item">
-                <h3 className="heading-6">Navigation</h3>
-                <p className="body-small">Stack and tab navigation with smooth transitions and gesture support</p>
-              </div>
-              <div className="component-item">
-                <h3 className="heading-6">State Management</h3>
-                <p className="body-small">Redux integration for complex state handling and data persistence</p>
-              </div>
-              <div className="component-item">
-                <h3 className="heading-6">Animations</h3>
-                <p className="body-small">Native driver animations for smooth 60fps performance</p>
-              </div>
-              <div className="component-item">
-                <h3 className="heading-6">Platform APIs</h3>
-                <p className="body-small">Camera, location, and device-specific feature integration</p>
-              </div>
-            </div>
+            <p className="body-base">
+              The packaging follows the same thinking. A kraft paper bag with two-color printing keeps production costs low but still feels intentional. Green for the logo, yellow for the sunflower, and the natural texture of kraft paper send a clear message. The brand is approachable, economical, environmentally aware, functionally efficient.
+            </p>
           </div>
         </section>
 
-        {/* User Experience */}
-        <section className="content-section">
-          <h2 className="section-title">User Experience Focus</h2>
-          <div className="section-content">
-            <p className="body-base">
-              Mobile user experience goes beyond visual design—it encompasses 
-              performance, accessibility, and platform conventions. The prototype 
-              demonstrates attention to these critical aspects.
-            </p>
-            
-            <div className="tech-features">
-              <div className="feature-item">
-                <h3 className="heading-6">Loading States</h3>
-                <p className="body-small">
-                  Thoughtful loading indicators and skeleton screens to maintain 
-                  user engagement during data fetching.
-                </p>
-              </div>
-              <div className="feature-item">
-                <h3 className="heading-6">Error Handling</h3>
-                <p className="body-small">
-                  Graceful error states with clear messaging and recovery options 
-                  for common failure scenarios.
-                </p>
-              </div>
-              <div className="feature-item">
-                <h3 className="heading-6">Accessibility</h3>
-                <p className="body-small">
-                  Screen reader support, high contrast modes, and keyboard navigation 
-                  for inclusive user experiences.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Performance Optimization */}
         <div className="image-container" ref={el => imagesRef.current[2] = el}>
           <img 
-            src="https://images.unsplash.com/photo-1551650975-87deedd944c3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2074&q=80" 
-            alt="Performance Metrics"
+            src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/Bloom/iPad%20Pro%2012.9_%20-%203.png" 
+            alt="Bloom Packaging"
             className="project-image"
           />
-          <div className="image-caption">
-            Performance metrics showing optimization techniques and benchmark results
-          </div>
         </div>
 
-        {/* Results */}
         <section className="content-section">
-          <h2 className="section-title">Results & Learnings</h2>
           <div className="section-content">
             <p className="body-base">
-              The mobile prototype project provided valuable insights into cross-platform 
-              development and the unique challenges of mobile user experience design.
-            </p>
-            
-            <div className="usage-stats">
-              <div className="stat-item">
-                <h3 className="heading-6">Development Speed</h3>
-                <p className="body-small">50% faster than native development</p>
-              </div>
-              <div className="stat-item">
-                <h3 className="heading-6">Code Reuse</h3>
-                <p className="body-small">85% shared code between iOS and Android</p>
-              </div>
-              <div className="stat-item">
-                <h3 className="heading-6">Performance</h3>
-                <p className="body-small">Near-native performance with optimizations</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Conclusion */}
-        <section className="content-section">
-          <h2 className="section-title">Key Learnings</h2>
-          <div className="section-content">
-            <p className="body-large">
-              Mobile development taught me that great apps are about more than 
-              just functionality—they're about creating experiences that feel 
-              natural and responsive on the platform.
+              Bloom's system can thus be capsuled as one clear icon with meaningful symbolism, a color framework tied to real product categories, packaging that complements genuine constraints, and design choices that are intentional at every level. It works because it is created for the context it lives in and not for design trends online.
             </p>
             <p className="body-base">
-              The most valuable lesson was learning to balance cross-platform 
-              efficiency with platform-specific optimizations. React Native 
-              provides powerful tools, but understanding when to use native 
-              modules is crucial for creating truly polished experiences.
+              Bloom isn't trying to be the best bakery brand in a tier-3 city. It is trying to invite curious customers in a category that doesn't exist and give the business a visual platform that can grow with it.
             </p>
           </div>
         </section>
       </main>
 
-      {/* Footer */}
       <footer className="project-footer">
-        <Link to="/" className="footer-link">
-          ← Back to Portfolio
-        </Link>
+        <Link to="/" className="footer-link">← Back to Portfolio</Link>
       </footer>
     </div>
   );

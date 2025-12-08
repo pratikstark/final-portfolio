@@ -10,329 +10,238 @@ const DataVizProject = () => {
   const heroRef = useRef(null);
   const contentRef = useRef(null);
   const imagesRef = useRef([]);
+  const containerRef = useRef(null);
+  const scrollTriggersRef = useRef([]);
 
   useEffect(() => {
-    // Clean up any existing ScrollTriggers first
-    ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+    let isInOverlay = false;
+    const checkOverlay = () => {
+      isInOverlay = containerRef.current?.closest('.project-overlay') !== null || 
+                    document.querySelector('.project-overlay') !== null;
+    };
+    
+    checkOverlay();
+    setTimeout(checkOverlay, 0);
+    
+    if (!isInOverlay) {
+      ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+    }
 
-    // Reset scroll position with proper null checks and timing
-    requestAnimationFrame(() => {
-      try {
-        window.scrollTo(0, 0);
-        if (document && document.documentElement) {
-          try {
-            document.documentElement.scrollTop = 0;
-          } catch (e) {
-            // Ignore if documentElement is null
+    if (!isInOverlay) {
+      requestAnimationFrame(() => {
+        try {
+          window.scrollTo(0, 0);
+          if (document && document.documentElement) {
+            try { document.documentElement.scrollTop = 0; } catch (e) {}
           }
-        }
-        if (document && document.body) {
-          try {
-            document.body.scrollTop = 0;
-          } catch (e) {
-            // Ignore if body is null
+          if (document && document.body) {
+            try { document.body.scrollTop = 0; } catch (e) {}
           }
-        }
-      } catch (e) {
-        // Ignore scroll reset errors
-      }
-    });
+        } catch (e) {}
+      });
+    }
 
-    // Hero section animation
+    const createdTriggers = [];
+
     if (heroRef.current) {
       gsap.fromTo(heroRef.current, 
         { opacity: 0, y: 50 },
-        { 
-          opacity: 1, 
-          y: 0, 
-          duration: 1.2, 
-          ease: "power2.out" 
-        }
+        { opacity: 1, y: 0, duration: 1.2, ease: "power2.out" }
       );
     }
 
-    // Content animation
     if (contentRef.current && contentRef.current.children) {
-      gsap.fromTo(contentRef.current.children,
+      const scrollTriggerConfig = {
+        trigger: contentRef.current,
+        start: "top 80%",
+        end: "bottom 20%",
+        toggleActions: "play none none reverse",
+        id: "jarvis-content-trigger"
+      };
+      
+      const animation = gsap.fromTo(contentRef.current.children,
         { opacity: 0, y: 30 },
         { 
-          opacity: 1, 
-          y: 0, 
-          duration: 0.8, 
-          stagger: 0.2,
-          ease: "power2.out",
-          scrollTrigger: {
-            trigger: contentRef.current,
-            start: "top 80%",
-            end: "bottom 20%",
-            toggleActions: "play none none reverse"
-          }
+          opacity: 1, y: 0, duration: 0.8, stagger: 0.2, ease: "power2.out",
+          scrollTrigger: scrollTriggerConfig
         }
       );
+      
+      const trigger = ScrollTrigger.getById("jarvis-content-trigger");
+      if (trigger) createdTriggers.push(trigger);
     }
 
-    // Image entrance animations
     imagesRef.current.forEach((img, index) => {
       if (img) {
-        gsap.fromTo(img,
+        const triggerId = `jarvis-image-trigger-${index}`;
+        const scrollTriggerConfig = {
+          trigger: img,
+          start: "top 85%",
+          end: "bottom 15%",
+          toggleActions: "play none none reverse",
+          id: triggerId
+        };
+        
+        const animation = gsap.fromTo(img,
           { opacity: 0, scale: 1.1, y: 50 },
           {
-            opacity: 1,
-            scale: 1,
-            y: 0,
-            duration: 1,
-            ease: "power2.out",
-            scrollTrigger: {
-              trigger: img,
-              start: "top 85%",
-              end: "bottom 15%",
-              toggleActions: "play none none reverse"
-            }
+            opacity: 1, scale: 1, y: 0, duration: 1, ease: "power2.out",
+            scrollTrigger: scrollTriggerConfig
           }
         );
+        
+        const trigger = ScrollTrigger.getById(triggerId);
+        if (trigger) createdTriggers.push(trigger);
       }
     });
 
+    scrollTriggersRef.current = createdTriggers;
+
     return () => {
-      ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+      scrollTriggersRef.current.forEach(trigger => {
+        if (trigger && trigger.kill) {
+          trigger.kill();
+        }
+      });
+      scrollTriggersRef.current = [];
     };
   }, []);
 
   return (
-    <div className="project-page">
-      {/* Navigation */}
+    <div className="project-page" ref={containerRef}>
       <nav className="project-nav">
-        <Link to="/" className="nav-link">
-          ← Back to Portfolio
-        </Link>
+        <Link to="/" className="nav-link">← Back to Portfolio</Link>
       </nav>
 
-      {/* Hero Section */}
       <section className="project-hero" ref={heroRef}>
         <div className="hero-content">
           <div className="hero-badge">Mini Project</div>
-          <h1 className="hero-title">Data Visualization Tool</h1>
+          <h1 className="hero-title">JARVIS</h1>
           <p className="hero-subtitle">
-            Interactive charts for complex datasets with real-time filtering and dynamic updates
+            Everyone knows by now that context drives AI quality. ChatGPT's memory features and user context layers prove that more background information yields better outputs. The equation is simple: regardless of which model or parameters you're running, richer context produces more useful results.
           </p>
           <div className="hero-meta">
-            <span className="meta-item">2023</span>
-            <span className="meta-item">Personal Project</span>
-            <span className="meta-item">Data Visualization</span>
+            <span className="meta-item">AI Assistant</span>
+            <span className="meta-item">Self-Hosted</span>
+            <span className="meta-item">Privacy-Focused</span>
           </div>
         </div>
       </section>
 
-      {/* Main Content */}
       <main className="project-content" ref={contentRef}>
-        {/* Introduction */}
         <section className="content-section">
-          <h2 className="section-title">The Challenge</h2>
           <div className="section-content">
-            <p className="body-large">
-              Data visualization is about more than just making charts—it's about 
-              making complex information accessible and actionable. This project 
-              explores how interactive visualizations can transform raw data 
-              into meaningful insights.
+            <p className="body-base">
+              But context has two fundamental problems. First, privacy. I don't want my entire digital life - files, personal data, browser history or half-formed ideas stored on someone else's infrastructure. Second, depth and variety. Real personalization isn't just a feature but it's patterns, contradictions, the specific texture of how you think and work. Building that through prompts or memory APIs is expensive in tokens and always incomplete.
             </p>
             <p className="body-base">
-              I wanted to create a tool that could handle large datasets while 
-              maintaining smooth performance and providing intuitive ways for 
-              users to explore and understand their data.
+              The technology for JARVIS-level AI assistants already exists. We're not waiting on better models but for better architecture. So as a non-commercial experiment and a tribute to what digital assistants should be, I built exactly what I wanted, which is a British digital butler with complete system access that processes everything locally. Your data never leaves your machine. The AI knows everything because it lives where your information already lives. Here's how I built this open source non commercial project.
             </p>
           </div>
         </section>
 
-        {/* Hero Image */}
+        <section className="content-section">
+          <h2 className="section-title">The Architecture</h2>
+          <div className="section-content">
+            <p className="body-base">
+              The system runs as a Docker Compose stack with seven interconnected services, each handling a specific part of the assistant's functionality:
+            </p>
+          </div>
+        </section>
+
         <div className="image-container" ref={el => imagesRef.current[0] = el}>
           <img 
-            src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80" 
-            alt="Data Visualization Dashboard"
+            src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/JARVIS/Screenshot%202025-12-06%20at%203.37.47%E2%80%AFPM.png" 
+            alt="JARVIS Architecture Diagram"
             className="project-image"
           />
-          <div className="image-caption">
-            Interactive dashboard showing multiple chart types and real-time data filtering
-          </div>
         </div>
 
-        {/* Design Principles */}
         <section className="content-section">
-          <h2 className="section-title">Design Principles</h2>
           <div className="section-content">
             <p className="body-base">
-              Effective data visualization requires careful consideration of 
-              color, typography, spacing, and interaction patterns. Each 
-              design decision impacts how users interpret and interact with the data.
+              <strong>Whisper</strong> handles speech-to-text conversion, listening to voice input and transcribing it into text that the system can process. It's the first step in the pipeline, running on port 5004.
             </p>
-            
-            <div className="principles-grid">
-              <div className="principle-item">
-                <h3 className="heading-6">Clarity First</h3>
-                <p className="body-small">
-                  Prioritizing clear communication over visual complexity, 
-                  ensuring data insights are immediately understandable.
-                </p>
-              </div>
-              <div className="principle-item">
-                <h3 className="heading-6">Progressive Disclosure</h3>
-                <p className="body-small">
-                  Revealing information in layers, allowing users to drill 
-                  down from high-level overviews to detailed analysis.
-                </p>
-              </div>
-              <div className="principle-item">
-                <h3 className="heading-6">Responsive Design</h3>
-                <p className="body-small">
-                  Adapting visualizations to different screen sizes while 
-                  maintaining readability and functionality.
-                </p>
-              </div>
-            </div>
+            <p className="body-base">
+              <strong>Ollama</strong> serves as the local LLM server on port 11434. This is the reasoning engine that is running Qwen but it can run any model locally, which means no cloud dependency and better privacy.
+            </p>
+            <p className="body-base">
+              <strong>Piper</strong> takes care of text-to-speech on port 5002, converting the assistant's responses back into spoken audio.
+            </p>
+            <p className="body-base">
+              The interesting part is how actions get executed. Audio input goes to a webhook that feeds into <strong>n8n</strong>, an automation engine running on port 5678. This is where the system becomes truly customizable—n8n acts as the coordination layer, allowing you to build workflows that connect the LLM's decisions to actual actions.
+            </p>
+            <p className="body-base">
+              <strong>Home Assistant</strong> provides the smart home integration, enabling voice commands to control lights, routines, and other connected devices.
+            </p>
+            <p className="body-base">
+              An <strong>MCP server</strong> (Model Context Protocol) runs on port 5003, exposing tools and capabilities to the LLM - essentially giving it hands to interact with the rest of my system.
+            </p>
+            <p className="body-base">
+              Finally, an <strong>nginx frontend</strong> on port 8080 serves up the visual interface modelled after JARVIS.
+            </p>
           </div>
         </section>
 
-        {/* Technical Implementation */}
+        <section className="content-section">
+          <h2 className="section-title">How It Works</h2>
+          <div className="section-content">
+            <p className="body-base">
+              The flow is straightforward: you speak into a microphone, Whisper transcribes your words, the local LLM processes the request, n8n orchestrates the appropriate action (whether that's controlling a smart device through Home Assistant, executing code via MCP, or fetching information), and Piper speaks the response back to you. All of this happens locally, on your own hardware.
+            </p>
+          </div>
+        </section>
+
         <div className="image-container" ref={el => imagesRef.current[1] = el}>
           <img 
-            src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2015&q=80" 
-            alt="Chart Implementation Code"
+            src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/JARVIS/Screenshot%202025-12-06%20at%203.41.50%E2%80%AFPM.png" 
+            alt="JARVIS Workflow"
             className="project-image"
           />
-          <div className="image-caption">
-            Code implementation showing chart configuration and data binding
-          </div>
         </div>
 
-        {/* Chart Types */}
         <section className="content-section">
-          <h2 className="section-title">Chart Types & Features</h2>
           <div className="section-content">
             <p className="body-base">
-              The tool supports multiple chart types, each optimized for 
-              different data patterns and use cases. Interactive features 
-              allow users to explore data dynamically.
+              The webhook-to-n8n approach is particularly customisable. Instead of hardcoding actions, you can visually design workflows in n8n's interface. Want your assistant to check your calendar, cross-reference the weather, and suggest what to wear? You can visually build that workflow.
             </p>
-            
-            <div className="components-list">
-              <div className="component-item">
-                <h3 className="heading-6">Line Charts</h3>
-                <p className="body-small">Time-series data with zoom and pan functionality for detailed analysis</p>
-              </div>
-              <div className="component-item">
-                <h3 className="heading-6">Bar Charts</h3>
-                <p className="body-small">Comparative data with sorting and filtering capabilities</p>
-              </div>
-              <div className="component-item">
-                <h3 className="heading-6">Scatter Plots</h3>
-                <p className="body-small">Correlation analysis with interactive point selection and tooltips</p>
-              </div>
-              <div className="component-item">
-                <h3 className="heading-6">Heat Maps</h3>
-                <p className="body-small">Matrix data visualization with color-coded intensity mapping</p>
-              </div>
-            </div>
           </div>
         </section>
 
-        {/* Performance Optimization */}
         <section className="content-section">
-          <h2 className="section-title">Performance Optimization</h2>
+          <h2 className="section-title">The Bigger Picture</h2>
           <div className="section-content">
             <p className="body-base">
-              Handling large datasets requires careful optimization to maintain 
-              smooth performance. The tool implements several techniques to ensure 
-              responsive interactions even with thousands of data points.
+              What's refreshing about this project is that it's genuinely modular. Each component can be swapped out or upgraded independently. If you don't like Qwen, you can switch to a different LLM. If you have a better GPU, use a better text to speech. The Docker containerization keeps everything clean and portable.
             </p>
-            
-            <div className="tech-features">
-              <div className="feature-item">
-                <h3 className="heading-6">Data Virtualization</h3>
-                <p className="body-small">
-                  Rendering only visible data points to maintain performance 
-                  with large datasets while preserving visual accuracy.
-                </p>
-              </div>
-              <div className="feature-item">
-                <h3 className="heading-6">Canvas Rendering</h3>
-                <p className="body-small">
-                  Using HTML5 Canvas for high-performance chart rendering 
-                  with smooth animations and interactions.
-                </p>
-              </div>
-              <div className="feature-item">
-                <h3 className="heading-6">Lazy Loading</h3>
-                <p className="body-small">
-                  Loading chart components and data on-demand to reduce 
-                  initial page load time and memory usage.
-                </p>
-              </div>
-            </div>
+            <p className="body-base">
+              It's not trying to be Alexa or Google Assistant. It's a system you control completely, that runs on your hardware, and that you can modify to fit exactly how you work and live. The data stays local. The logic is transparent. The customization is limited only by what you can build in n8n.
+            </p>
           </div>
         </section>
 
-        {/* Interactive Features */}
         <div className="image-container" ref={el => imagesRef.current[2] = el}>
           <img 
-            src="https://images.unsplash.com/photo-1551650975-87deedd944c3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2074&q=80" 
-            alt="Interactive Chart Features"
+            src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/JARVIS/Screenshot%202025-12-06%20at%203.42.10%E2%80%AFPM.png" 
+            alt="JARVIS Interface"
             className="project-image"
           />
-          <div className="image-caption">
-            Interactive features including filtering, zooming, and real-time updates
-          </div>
         </div>
 
-        {/* Results */}
         <section className="content-section">
-          <h2 className="section-title">Impact & Usage</h2>
           <div className="section-content">
             <p className="body-base">
-              The data visualization tool has been used across multiple projects, 
-              significantly improving how I present and analyze data. It's become 
-              an essential part of my toolkit for data-driven decision making.
-            </p>
-            
-            <div className="usage-stats">
-              <div className="stat-item">
-                <h3 className="heading-6">Performance</h3>
-                <p className="body-small">Handles 10,000+ data points smoothly</p>
-              </div>
-              <div className="stat-item">
-                <h3 className="heading-6">Accessibility</h3>
-                <p className="body-small">WCAG 2.1 AA compliant visualizations</p>
-              </div>
-              <div className="stat-item">
-                <h3 className="heading-6">Flexibility</h3>
-                <p className="body-small">Supports multiple data formats and sources</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Conclusion */}
-        <section className="content-section">
-          <h2 className="section-title">Key Learnings</h2>
-          <div className="section-content">
-            <p className="body-large">
-              This project taught me that great data visualization is about 
-              balancing technical performance with user experience. The most 
-              beautiful chart is useless if it doesn't help users understand their data.
+              There's room to grow, of course. Adding memory so the assistant remembers context across conversations, making the UI reactive to system events, building in proactive suggestions based on learned routines and these would all push the system further. But as a foundation, this is version one. It's the kind of project that proves you don't need cloud services and proprietary platforms to build something genuinely useful and private.
             </p>
             <p className="body-base">
-              The most valuable lesson was learning to think like a data analyst 
-              while designing like a user experience professional. Every design 
-              decision must serve the dual purpose of being both technically 
-              sound and humanly understandable.
+              For anyone interested in personal AI, privacy-focused computing, or home automation, this architecture offers a closed loop system. It's not about recreating Tony Stark's AI from the movies but about building something practical that actually assists you without intervention and allowing access to a dozen third party cloud based services.
             </p>
           </div>
         </section>
       </main>
 
-      {/* Footer */}
       <footer className="project-footer">
-        <Link to="/" className="footer-link">
-          ← Back to Portfolio
-        </Link>
+        <Link to="/" className="footer-link">← Back to Portfolio</Link>
       </footer>
     </div>
   );

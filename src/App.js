@@ -5,13 +5,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import ErrorBoundary from './ErrorBoundary';
 import './App.css';
 
-// Import project pages
-import CognixaProject from './pages/CognixaProject';
-import SettlinProject from './pages/SettlinProject';
-import AnimationLibraryProject from './pages/AnimationLibraryProject';
-import DataVizProject from './pages/DataVizProject';
-import MobileAppProject from './pages/MobileAppProject';
-import AIChatProject from './pages/AIChatProject';
+// Import demo pages
 import TextPressureDemo from './pages/TextPressureDemo';
 import VerticalCutRevealDemo from './pages/VerticalCutRevealDemo';
 
@@ -41,7 +35,7 @@ function ScrollReset() {
         });
         ScrollTrigger.refresh();
         gsap.killTweensOf("*");
-        
+
         // Remove any GSAP pin spacers
         const pinSpacers = document.querySelectorAll('[data-pin-spacer]');
         pinSpacers.forEach(spacer => {
@@ -58,7 +52,7 @@ function ScrollReset() {
       }
     };
   }, [pathname]);
-  
+
   // Additional effect to reset scroll on mount
   useLayoutEffect(() => {
     window.scrollTo(0, 0);
@@ -77,18 +71,12 @@ function ScrollReset() {
 // Routes component with key that forces complete remount on route change
 function AppRoutes() {
   const location = useLocation();
-  
+
   // Key changes with pathname - forces React to completely destroy and recreate the Routes tree
   // This prevents React from trying to diff the old and new components, which causes the removeChild error
   return (
     <Routes key={location.pathname}>
       <Route path="/" element={<PortfolioApp key="portfolio" />} />
-      <Route path="/cognixa" element={<CognixaProject key="cognixa" />} />
-      <Route path="/settlin" element={<SettlinProject key="settlin" />} />
-      <Route path="/animation-library" element={<AnimationLibraryProject key="animation-library" />} />
-      <Route path="/data-viz" element={<DataVizProject key="data-viz" />} />
-      <Route path="/mobile-app" element={<MobileAppProject key="mobile-app" />} />
-      <Route path="/ai-chat" element={<AIChatProject key="ai-chat" />} />
       <Route path="/text-pressure-demo" element={<TextPressureDemo key="text-pressure-demo" />} />
       <Route path="/vertical-cut-reveal-demo" element={<VerticalCutRevealDemo key="vertical-cut-reveal-demo" />} />
     </Routes>

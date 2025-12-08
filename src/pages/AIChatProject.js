@@ -10,329 +10,182 @@ const AIChatProject = () => {
   const heroRef = useRef(null);
   const contentRef = useRef(null);
   const imagesRef = useRef([]);
+  const containerRef = useRef(null);
+  const scrollTriggersRef = useRef([]);
 
   useEffect(() => {
-    // Clean up any existing ScrollTriggers first
-    ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+    let isInOverlay = false;
+    const checkOverlay = () => {
+      isInOverlay = containerRef.current?.closest('.project-overlay') !== null || 
+                    document.querySelector('.project-overlay') !== null;
+    };
+    
+    checkOverlay();
+    setTimeout(checkOverlay, 0);
+    
+    if (!isInOverlay) {
+      ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+    }
 
-    // Reset scroll position with proper null checks and timing
-    requestAnimationFrame(() => {
-      try {
-        window.scrollTo(0, 0);
-        if (document && document.documentElement) {
-          try {
-            document.documentElement.scrollTop = 0;
-          } catch (e) {
-            // Ignore if documentElement is null
+    if (!isInOverlay) {
+      requestAnimationFrame(() => {
+        try {
+          window.scrollTo(0, 0);
+          if (document && document.documentElement) {
+            try { document.documentElement.scrollTop = 0; } catch (e) {}
           }
-        }
-        if (document && document.body) {
-          try {
-            document.body.scrollTop = 0;
-          } catch (e) {
-            // Ignore if body is null
+          if (document && document.body) {
+            try { document.body.scrollTop = 0; } catch (e) {}
           }
-        }
-      } catch (e) {
-        // Ignore scroll reset errors
-      }
-    });
+        } catch (e) {}
+      });
+    }
 
-    // Hero section animation
+    const createdTriggers = [];
+
     if (heroRef.current) {
       gsap.fromTo(heroRef.current, 
         { opacity: 0, y: 50 },
-        { 
-          opacity: 1, 
-          y: 0, 
-          duration: 1.2, 
-          ease: "power2.out" 
-        }
+        { opacity: 1, y: 0, duration: 1.2, ease: "power2.out" }
       );
     }
 
-    // Content animation
     if (contentRef.current && contentRef.current.children) {
-      gsap.fromTo(contentRef.current.children,
+      const scrollTriggerConfig = {
+        trigger: contentRef.current,
+        start: "top 80%",
+        end: "bottom 20%",
+        toggleActions: "play none none reverse",
+        id: "conscious-living-content-trigger"
+      };
+      
+      const animation = gsap.fromTo(contentRef.current.children,
         { opacity: 0, y: 30 },
         { 
-          opacity: 1, 
-          y: 0, 
-          duration: 0.8, 
-          stagger: 0.2,
-          ease: "power2.out",
-          scrollTrigger: {
-            trigger: contentRef.current,
-            start: "top 80%",
-            end: "bottom 20%",
-            toggleActions: "play none none reverse"
-          }
+          opacity: 1, y: 0, duration: 0.8, stagger: 0.2, ease: "power2.out",
+          scrollTrigger: scrollTriggerConfig
         }
       );
+      
+      const trigger = ScrollTrigger.getById("conscious-living-content-trigger");
+      if (trigger) createdTriggers.push(trigger);
     }
 
-    // Image entrance animations
     imagesRef.current.forEach((img, index) => {
       if (img) {
-        gsap.fromTo(img,
+        const triggerId = `conscious-living-image-trigger-${index}`;
+        const scrollTriggerConfig = {
+          trigger: img,
+          start: "top 85%",
+          end: "bottom 15%",
+          toggleActions: "play none none reverse",
+          id: triggerId
+        };
+        
+        const animation = gsap.fromTo(img,
           { opacity: 0, scale: 1.1, y: 50 },
           {
-            opacity: 1,
-            scale: 1,
-            y: 0,
-            duration: 1,
-            ease: "power2.out",
-            scrollTrigger: {
-              trigger: img,
-              start: "top 85%",
-              end: "bottom 15%",
-              toggleActions: "play none none reverse"
-            }
+            opacity: 1, scale: 1, y: 0, duration: 1, ease: "power2.out",
+            scrollTrigger: scrollTriggerConfig
           }
         );
+        
+        const trigger = ScrollTrigger.getById(triggerId);
+        if (trigger) createdTriggers.push(trigger);
       }
     });
 
+    scrollTriggersRef.current = createdTriggers;
+
     return () => {
-      ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+      scrollTriggersRef.current.forEach(trigger => {
+        if (trigger && trigger.kill) {
+          trigger.kill();
+        }
+      });
+      scrollTriggersRef.current = [];
     };
   }, []);
 
   return (
-    <div className="project-page">
-      {/* Navigation */}
+    <div className="project-page" ref={containerRef}>
       <nav className="project-nav">
-        <Link to="/" className="nav-link">
-          ← Back to Portfolio
-        </Link>
+        <Link to="/" className="nav-link">← Back to Portfolio</Link>
       </nav>
 
-      {/* Hero Section */}
       <section className="project-hero" ref={heroRef}>
         <div className="hero-content">
           <div className="hero-badge">Mini Project</div>
-          <h1 className="hero-title">AI Chat Interface</h1>
+          <h1 className="hero-title">Conscious Living</h1>
           <p className="hero-subtitle">
-            Conversational UI experiments exploring the intersection of AI and human-centered design
+            During my time as part of the core team at Conscious Living Store, I took on the responsibility of building and launching their e-commerce platform using Shopify, working toward a mission that went far beyond simply selling products online. The company exists to accelerate the world's adoption of conscious, everyday products that exist in harmony with nature, but what made this particularly challenging and interesting was the need to make that transition feel completely seamless for customers.
           </p>
           <div className="hero-meta">
-            <span className="meta-item">2023</span>
-            <span className="meta-item">Personal Project</span>
-            <span className="meta-item">AI/UX Design</span>
+            <span className="meta-item">E-Commerce</span>
+            <span className="meta-item">Shopify</span>
+            <span className="meta-item">UX Design</span>
           </div>
         </div>
       </section>
 
-      {/* Main Content */}
       <main className="project-content" ref={contentRef}>
-        {/* Introduction */}
         <section className="content-section">
-          <h2 className="section-title">The Exploration</h2>
           <div className="section-content">
-            <p className="body-large">
-              AI chat interfaces represent a new frontier in user experience design. 
-              Unlike traditional interfaces with predictable interactions, AI conversations 
-              require designing for uncertainty, context, and natural language understanding.
-            </p>
             <p className="body-base">
-              This project explores how to create intuitive, helpful, and trustworthy 
-              AI interfaces that feel natural while maintaining user control and transparency 
-              about the AI's capabilities and limitations.
+              I approached the project by setting up the Shopify store from the ground up, which meant starting with fundamental decisions about how the site would look and function. I configured all the essential e-commerce functionality that makes online shopping possible, including the product catalog system, the shopping cart experience, and the checkout process that would ultimately convert browsers into buyers. I carefully configured shipping and tax to comply with various regulations, profitability and logistics while keeping the customer experience straightforward.
             </p>
           </div>
         </section>
 
-        {/* Hero Image */}
         <div className="image-container" ref={el => imagesRef.current[0] = el}>
           <img 
-            src="https://images.unsplash.com/photo-1677442136019-21780ecad995?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80" 
-            alt="AI Chat Interface"
+            src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/CL/Screenshot%202025-12-04%20at%207.42.33%E2%80%AFAM.png" 
+            alt="Conscious Living Store"
             className="project-image"
           />
-          <div className="image-caption">
-            Conversational interface showing natural language interaction and contextual responses
-          </div>
         </div>
 
-        {/* Design Principles */}
         <section className="content-section">
-          <h2 className="section-title">Design Principles</h2>
+          <h2 className="section-title">The Architecture</h2>
           <div className="section-content">
             <p className="body-base">
-              AI interfaces require a different set of design principles than traditional 
-              applications. The focus shifts from task completion to conversation flow, 
-              from predictability to adaptability.
+              The site required thoughtful planning to ensure that customers could easily browse and discover products without feeling overwhelmed or lost in a sea of options. I developed intuitive navigation menus and category structures that would guide visitors naturally through the product range, set up collection pages that organized products in logical groupings that made sense for how people actually shop, and implemented search and a custom chatbot so customers could quickly find specific items they had in mind.
             </p>
-            
-            <div className="principles-grid">
-              <div className="principle-item">
-                <h3 className="heading-6">Transparency</h3>
-                <p className="body-small">
-                  Making AI capabilities and limitations clear to users, 
-                  including when the AI is uncertain or needs clarification.
-                </p>
-              </div>
-              <div className="principle-item">
-                <h3 className="heading-6">Control</h3>
-                <p className="body-small">
-                  Giving users control over the conversation flow, 
-                  allowing them to redirect, clarify, or stop interactions.
-                </p>
-              </div>
-              <div className="principle-item">
-                <h3 className="heading-6">Context Awareness</h3>
-                <p className="body-small">
-                  Designing interfaces that understand and respond to 
-                  conversation context and user intent.
-                </p>
-              </div>
-            </div>
+            <p className="body-base">
+              Building out the product presentation framework meant creating templates that would showcase each item in the best possible light while providing all the information a conscious consumer might want before making a purchase. The product pages for items like the neem wood comb featured comprehensive image galleries, detailed descriptions and clear pricing, configured variant options for items that came in different styles with individual assets or included packaging choices. I also added sections dedicated to sustainability information including maintenance instructions, upcycling potential, and proper disposal methods. This is something that accelerated the company's vision beyond their metrics and product catalogue.
+            </p>
+            <p className="body-base">
+              I extensively tested and optimized the mobile shopping experience, adjusted layouts specifically for tablet and desktop views to take advantage of larger screens, and verified that the checkout process remained fully functional regardless of what device someone was using. The product pages needed to maintain their visual impact. I also connected various technical integrations to enhance the site's functionality, bringing together necessary Shopify apps that added features beyond the platform's core capabilities, setting up analytics tracking so the team could understand customer behavior and make data-driven decisions, configuring domain settings and ensuring the site was professional and secure, and focusing on site security and performance optimization to build trust with users.
+            </p>
           </div>
         </section>
 
-        {/* Conversation Design */}
         <div className="image-container" ref={el => imagesRef.current[1] = el}>
           <img 
-            src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80" 
-            alt="Conversation Flow Design"
+            src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/CL/Screenshot%202025-12-08%20at%2012.44.45%E2%80%AFAM.png" 
+            alt="Conscious Living Architecture"
             className="project-image"
           />
-          <div className="image-caption">
-            Conversation flow diagrams showing different interaction patterns and user paths
-          </div>
         </div>
 
-        {/* Interface Components */}
         <section className="content-section">
-          <h2 className="section-title">Interface Components</h2>
+          <h2 className="section-title">Aesthetics vs. Functionality balance</h2>
           <div className="section-content">
             <p className="body-base">
-              Building effective AI chat interfaces requires specialized components 
-              that handle the unique aspects of conversational interaction, including 
-              typing indicators, message states, and contextual suggestions.
-            </p>
-            
-            <div className="components-list">
-              <div className="component-item">
-                <h3 className="heading-6">Message Bubbles</h3>
-                <p className="body-small">Distinct visual treatment for user and AI messages with proper spacing and alignment</p>
-              </div>
-              <div className="component-item">
-                <h3 className="heading-6">Typing Indicators</h3>
-                <p className="body-small">Animated indicators showing when the AI is processing or generating responses</p>
-              </div>
-              <div className="component-item">
-                <h3 className="heading-6">Quick Actions</h3>
-                <p className="body-small">Contextual buttons and suggestions to help users navigate conversations</p>
-              </div>
-              <div className="component-item">
-                <h3 className="heading-6">Error States</h3>
-                <p className="body-small">Graceful handling of AI errors with clear messaging and recovery options</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* User Experience Patterns */}
-        <section className="content-section">
-          <h2 className="section-title">User Experience Patterns</h2>
-          <div className="section-content">
-            <p className="body-base">
-              AI chat interfaces introduce new UX patterns that don't exist in 
-              traditional applications. Understanding these patterns is crucial 
-              for creating intuitive conversational experiences.
-            </p>
-            
-            <div className="tech-features">
-              <div className="feature-item">
-                <h3 className="heading-6">Progressive Disclosure</h3>
-                <p className="body-small">
-                  Revealing AI capabilities gradually as users become more 
-                  comfortable with the interface and conversation flow.
-                </p>
-              </div>
-              <div className="feature-item">
-                <h3 className="heading-6">Contextual Help</h3>
-                <p className="body-small">
-                  Providing help and suggestions based on conversation context 
-                  and user behavior patterns.
-                </p>
-              </div>
-              <div className="feature-item">
-                <h3 className="heading-6">Fallback Strategies</h3>
-                <p className="body-small">
-                  Designing graceful fallbacks when AI can't understand or 
-                  respond appropriately to user input.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Technical Implementation */}
-        <div className="image-container" ref={el => imagesRef.current[2] = el}>
-          <img 
-            src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2015&q=80" 
-            alt="AI Integration Architecture"
-            className="project-image"
-          />
-          <div className="image-caption">
-            Technical architecture showing AI integration and real-time communication setup
-          </div>
-        </div>
-
-        {/* Results */}
-        <section className="content-section">
-          <h2 className="section-title">Results & Insights</h2>
-          <div className="section-content">
-            <p className="body-base">
-              The AI chat interface project provided valuable insights into the 
-              unique challenges and opportunities of conversational AI design. 
-              It revealed the importance of balancing AI capabilities with user expectations.
-            </p>
-            
-            <div className="usage-stats">
-              <div className="stat-item">
-                <h3 className="heading-6">User Trust</h3>
-                <p className="body-small">85% user confidence in AI responses</p>
-              </div>
-              <div className="stat-item">
-                <h3 className="heading-6">Engagement</h3>
-                <p className="body-small">3x longer session duration vs traditional UI</p>
-              </div>
-              <div className="stat-item">
-                <h3 className="heading-6">Satisfaction</h3>
-                <p className="body-small">4.6/5 user satisfaction rating</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Conclusion */}
-        <section className="content-section">
-          <h2 className="section-title">Key Learnings</h2>
-          <div className="section-content">
-            <p className="body-large">
-              Designing AI interfaces taught me that the future of UX lies in 
-              creating experiences that feel natural and human while leveraging 
-              the power of artificial intelligence.
+              Throughout the project, I encountered meaningful challenges that pushed my problem-solving abilities and deepened my understanding of e-commerce development. Balancing aesthetic appeal with functionality became a constant consideration, as I wanted the site to feel beautiful and aligned with sustainable values without sacrificing the intuitive, accessible e-commerce features that make shopping online feel effortless. The warm, natural photography and earth-toned color palette needed to work alongside complementary calls-to-action and functional elements like quantity selectors and variant dropdowns.
             </p>
             <p className="body-base">
-              The most valuable lesson was learning to design for uncertainty. 
-              Unlike traditional interfaces with predictable outcomes, AI interfaces 
-              require designing for multiple possible responses and graceful 
-              handling of unexpected situations. This project reinforced my belief 
-              that great design is about creating trust and clarity in complex systems.
+              The outcome of all this work was the successful launch of a functional, user-friendly e-commerce platform that enables Conscious Living Store to sell their products online and genuinely reach customers who are interested in sustainable living but might not know where to start. The clean, minimalist design with its focus on natural materials and honest product photography created an authentic brand experience that differentiated the store from conventional retailers while maintaining all the functionality customers expect from modern e-commerce.
+            </p>
+            <p className="body-base">
+              The project strengthened my understanding of e-commerce platform architecture and best practices in ways that only hands-on experience can provide, taught me about the technical requirements of online retail including payment processing, inventory management, and order fulfillment that all need to work together seamlessly, deepened my appreciation for user experience considerations that are specific to online shopping and differ from other types of web experiences, and gave me practical knowledge of Shopify's ecosystem and capabilities that I can now apply to future projects.
             </p>
           </div>
         </section>
       </main>
 
-      {/* Footer */}
       <footer className="project-footer">
-        <Link to="/" className="footer-link">
-          ← Back to Portfolio
-        </Link>
+        <Link to="/" className="footer-link">← Back to Portfolio</Link>
       </footer>
     </div>
   );

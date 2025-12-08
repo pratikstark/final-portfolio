@@ -6,6 +6,13 @@ import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ScrollSmoother } from 'gsap/ScrollSmoother';
 import './App.css';
+import AnimationLibraryProject from './pages/AnimationLibraryProject';
+import CognixaProject from './pages/CognixaProject';
+import SettlinProject from './pages/SettlinProject';
+import DataVizProject from './pages/DataVizProject';
+import MobileAppProject from './pages/MobileAppProject';
+import AIChatProject from './pages/AIChatProject';
+import PravahProject from './pages/PravahProject';
 
 // Import SVG assets for arrow/close widget
 import arrowSvg from './assets/arrow.svg';
@@ -41,9 +48,13 @@ const debugWarn = (...args) => {
 // Project page imports removed - they're now in App.js
 import { TextPressure } from './components/ui/interactive-text-pressure.js';
 import { VerticalCutReveal } from './components/ui/vertical-cut-reveal.js';
-// Import Cognixa project SVGs
-import cognixaNonHovered from './assets/cognixa_non.hovered.svg';
-import cognixaHovered from './assets/cognixa_hovered.svg';
+// Project image URLs
+const COGNIXA_NON_HOVERED = 'https://cdn.pratiksinghal.in/Projects%20Aseets/COGNIXA.png';
+const COGNIXA_HOVERED = 'https://cdn.pratiksinghal.in/Projects%20Aseets/COGNIXA_HOVER.png';
+const SETTLIN_NON_HOVERED = 'https://cdn.pratiksinghal.in/Projects%20Aseets/SETTLIN.png';
+const SETTLIN_HOVERED = 'https://cdn.pratiksinghal.in/Projects%20Aseets/SETTLIN_HOVER.png';
+const PRAVAH_NON_HOVERED = 'https://cdn.pratiksinghal.in/Projects%20Aseets/PRAVAH.png';
+const PRAVAH_HOVERED = 'https://cdn.pratiksinghal.in/Projects%20Aseets/PRAVAH_HOVER.png';
 import { createOdometerAnimation, setInitialHiddenState } from './utils/odometer-animation.js';
 import ScrollVelocity from './components/ui/ScrollVelocity.jsx';
 import LightRays from './components/ui/LightRays.js';
@@ -380,6 +391,13 @@ function PortfolioApp() {
   const [hoveredProject, setHoveredProject] = useState(null);
   const [hoveredMiniProject, setHoveredMiniProject] = useState(null);
   const [showMiniAurora, setShowMiniAurora] = useState(false);
+  const [showPrismOverlay, setShowPrismOverlay] = useState(false);
+  const [showCognixaOverlay, setShowCognixaOverlay] = useState(false);
+  const [showSettlinOverlay, setShowSettlinOverlay] = useState(false);
+  const [showDataVizOverlay, setShowDataVizOverlay] = useState(false);
+  const [showMobileAppOverlay, setShowMobileAppOverlay] = useState(false);
+  const [showAIChatOverlay, setShowAIChatOverlay] = useState(false);
+  const [showPravahOverlay, setShowPravahOverlay] = useState(false);
   const [thirdProjectHoveredFor1s, setThirdProjectHoveredFor1s] = useState(false);
   const thirdProjectHoverTimerRef = useRef(null);
   const thirdProjectHoveredFor1sRef = useRef(false);
@@ -419,16 +437,110 @@ function PortfolioApp() {
     setShowAudioPrompt(false);
   };
 
-  // Preload Cognixa images for smooth hover transitions
+  // Preload project images for smooth hover transitions
   useEffect(() => {
     const preloadImages = () => {
-      const img1 = new Image();
-      img1.src = cognixaNonHovered;
-      const img2 = new Image();
-      img2.src = cognixaHovered;
+      const images = [
+        COGNIXA_NON_HOVERED,
+        COGNIXA_HOVERED,
+        SETTLIN_NON_HOVERED,
+        SETTLIN_HOVERED,
+        PRAVAH_NON_HOVERED,
+        PRAVAH_HOVERED
+      ];
+      images.forEach(src => {
+        const img = new Image();
+        img.src = src;
+      });
     };
     preloadImages();
   }, []);
+
+  // Handle all overlays: body scroll lock and Escape key
+  const anyOverlayOpen = showPrismOverlay || showCognixaOverlay || showSettlinOverlay || 
+                         showDataVizOverlay || showMobileAppOverlay || showAIChatOverlay || showPravahOverlay;
+  
+  // Apply dark mode to entire page when last mini project is hovered for 1s OR when at bottom of page (but not when scrolling up)
+  useEffect(() => {
+    const checkDarkMode = () => {
+      // Check if at bottom of page (contact section)
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
+      const atBottom = scrollTop + windowHeight >= documentHeight - 50; // 50px threshold
+      
+      // If scrolling up, always remove dark mode (user wants light mode when scrolling up)
+      if (isScrollingUpwardRef.current) {
+        document.body.classList.remove('page-dark-mode');
+        return;
+      }
+      
+      // Dark mode should be active if:
+      // 1. Last mini project hovered for 1s, OR
+      // 2. At bottom of page
+      const shouldBeDark = lastMiniProjectHoveredFor1s || atBottom;
+      
+      if (shouldBeDark) {
+        document.body.classList.add('page-dark-mode');
+      } else {
+        document.body.classList.remove('page-dark-mode');
+      }
+    };
+    
+    checkDarkMode();
+    
+    // Also check on scroll to update immediately when scroll direction changes
+    const handleScroll = () => {
+      checkDarkMode();
+    };
+    
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      // Only remove if not at bottom and not last mini project hovered
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
+      const atBottom = scrollTop + windowHeight >= documentHeight - 50;
+      if (!atBottom && !lastMiniProjectHoveredFor1s) {
+        document.body.classList.remove('page-dark-mode');
+      }
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [lastMiniProjectHoveredFor1s]);
+  
+  useEffect(() => {
+    if (anyOverlayOpen) {
+      // Lock body scroll
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+
+      // Handle Escape key
+      const handleEscape = (e) => {
+        if (e.key === 'Escape') {
+          setShowPrismOverlay(false);
+          setShowCognixaOverlay(false);
+          setShowSettlinOverlay(false);
+          setShowDataVizOverlay(false);
+          setShowMobileAppOverlay(false);
+          setShowAIChatOverlay(false);
+          setShowPravahOverlay(false);
+        }
+      };
+      window.addEventListener('keydown', handleEscape);
+
+      return () => {
+        document.body.style.overflow = originalOverflow;
+        window.removeEventListener('keydown', handleEscape);
+      };
+    } else {
+      // When overlay closes, refresh ScrollTriggers to restore main page functionality
+      // Use a small delay to ensure overlay is fully unmounted
+      setTimeout(() => {
+        ScrollTrigger.refresh();
+      }, 100);
+    }
+  }, [anyOverlayOpen]);
 
   useEffect(() => {
     debugLog('PortfolioApp useEffect running - HOMEPAGE ONLY');
@@ -2006,7 +2118,7 @@ function PortfolioApp() {
     }
 
     // Robust dark mode transition with different behaviors for scroll directions
-    let isDarkMode = false;
+    // Scroll direction detection for marquee animation (not for dark mode anymore)
     let lastScrollY = window.scrollY;
     let scrollDirection = 'down';
 
@@ -2021,56 +2133,8 @@ function PortfolioApp() {
     gsap.set('.about-title-line .arrow svg', { filter: 'none' });
     gsap.set('.marquee-contact-section .category-svg img', { filter: 'none' });
 
-    // Fast transition functions
-    const activateDarkMode = () => {
-      if (isDarkMode) return;
-      isDarkMode = true;
-      debugLog('🌙 Activating dark mode');
-
-      // Add dark mode class for CSS styling
-      document.querySelector('.marquee-contact-section')?.classList.add('dark-mode');
-
-      gsap.to('body', { backgroundColor: '#000000', duration: 0.02, ease: 'power2.out' });
-      gsap.to('.marquee-contact-section', { backgroundColor: '#000000', color: '#ffffff', duration: 0.02, ease: 'power2.out' });
-      gsap.to('.marquee-text', { color: '#ffffff', duration: 0.02, ease: 'power2.out' });
-      gsap.to('.contact-options-kicker, .contact-options-kicker-text', { color: '#ffffff', duration: 0.02, ease: 'power2.out' });
-      // Only target SVG paths in the about section, not contact section
-      gsap.to('.about .about-title-line .morphing-icon svg path', { stroke: '#ffffff', duration: 0.02, ease: 'power2.out' });
-      gsap.to('.about .about-title-line .morphing-icon.icon-fill svg path', { fill: '#ffffff', duration: 0.02, ease: 'power2.out' });
-
-      // Apply white filter to arrow SVGs and contact section PNG images
-      gsap.to('.about-title-line .arrow svg', { filter: 'brightness(0) invert(1)', duration: 0.02, ease: 'power2.out' });
-      gsap.to('.marquee-contact-section .category-svg img', { filter: 'brightness(0) invert(1)', duration: 0.02, ease: 'power2.out' });
-
-      debugLog('✅ Dark mode activated');
-    };
-
-    const activateLightMode = () => {
-      if (!isDarkMode) return;
-      isDarkMode = false;
-      debugLog('☀️ Activating light mode');
-
-      // Debug: Check if images exist
-      const images = document.querySelectorAll('.category-svg img');
-      debugLog('🔍 Found', images.length, 'PNG images in light mode:', images);
-
-      // Remove dark mode class for CSS styling
-      document.querySelector('.marquee-contact-section')?.classList.remove('dark-mode');
-
-      gsap.to('body', { backgroundColor: '#f5f5f0', duration: 0.02, ease: 'power2.out' });
-      gsap.to('.marquee-contact-section', { backgroundColor: '#f5f5f0', color: '#111111', duration: 0.02, ease: 'power2.out' });
-      gsap.to('.marquee-text', { color: '#111111', duration: 0.02, ease: 'power2.out' });
-      gsap.to('.contact-options-kicker, .contact-options-kicker-text', { color: '#111111', duration: 0.02, ease: 'power2.out' });
-      // Only target SVG paths in the about section, not contact section
-      gsap.to('.about .about-title-line .morphing-icon svg path', { stroke: '#111111', duration: 0.02, ease: 'power2.out' });
-      gsap.to('.about .about-title-line .morphing-icon.icon-fill svg path', { fill: '#111111', duration: 0.02, ease: 'power2.out' });
-
-      // Remove filter from arrow SVGs and contact section PNG images
-      gsap.to('.about-title-line .arrow svg', { filter: 'none', duration: 0.02, ease: 'power2.out' });
-      gsap.to('.marquee-contact-section .category-svg img', { filter: 'none', duration: 0.02, ease: 'power2.out' });
-
-      debugLog('✅ Light mode activated');
-    };
+    // Dark mode is now handled by the site-wide dark mode system (body.page-dark-mode)
+    // No separate contact section dark mode functions needed
 
     // Scroll direction detection
     const handleScroll = () => {
@@ -2081,34 +2145,8 @@ function PortfolioApp() {
 
     window.addEventListener('scroll', handleScroll, { passive: true });
 
-    // ScrollTrigger for Schedule Call (scrolling down)
-    ScrollTrigger.create({
-      trigger: '.about-title-line[data-section="schedule"]',
-      start: 'top 80%',
-      end: 'bottom 20%',
-      onEnter: () => {
-        if (scrollDirection === 'down') {
-          activateDarkMode();
-        }
-      },
-      onLeave: () => {
-        if (scrollDirection === 'down') {
-          gsap.to('body', { backgroundColor: '#f0f8e6', duration: 0.05, ease: 'power2.out' });
-        }
-      }
-    });
-
-    // ScrollTrigger for upward scroll detection (any upward movement in marquee section)
-    ScrollTrigger.create({
-      trigger: '.marquee-contact-section',
-      start: 'top bottom',
-      end: 'bottom top',
-      onUpdate: (self) => {
-        if (scrollDirection === 'up' && self.progress > 0.1) {
-          activateLightMode();
-        }
-      }
-    });
+    // Contact section dark mode is now handled by the site-wide dark mode system
+    // No separate ScrollTriggers needed - the site-wide system handles everything
 
     // Setup marquee with delay to ensure DOM is ready
     setTimeout(setupMarqueeAnimation, 500);
@@ -3004,17 +3042,17 @@ function PortfolioApp() {
       psychology: {
         icon: <PsychologyIcon />,
         title: 'Psychology',
-        body: `<p>My academic path started with a <strong>multidisciplinary BA in Journalism, Psychology, and Computer Science</strong> at Kristu Jayanti College, followed by an <strong>MSc in Clinical Psychology</strong> from Christ University.</p><p>Psychology has shaped the way I understand human behavior, decision-making, and how people interact with products. <u>It forms the base of how I build things.</u> I rely on research, observation, and behavioral frameworks to design solutions that solve genuine problems rather than surface-level ones. This approach lets me quantify user behavior and turn it into practical insights.</p><p>This shows up clearly in <strong>Cognixa</strong>, my client-management platform for psychologists. It began as a personal need and grew into a structured product shaped by behavioral analysis and user psychology. Psychology continues to guide my product thinking and gives my work a naturally human-centered edge.</p>`
+        body: `<p>My academic path started with a multidisciplinary <strong>BA in Journalism, Psychology, and Computer Science at Kristu Jayanti College</strong>, followed by an <strong>MSc in Clinical Psychology from Christ University. Psychology</strong>. This has shaped the way I understand human behavior, decision-making, and how people interact with products.</p><p>It forms the base of how I build things. I rely on research, observation, and behavioral frameworks to design solutions that solve genuine problems rather than surface-level ones. This approach lets me quantify user behavior and turn it into practical insights.</p><p>This shows up clearly in <u data-project="cognixa">Cognixa</u>, my client-management platform for psychologists. It began as a personal need and grew into a structured product shaped by behavioral analysis and user psychology. Psychology continues to guide my product thinking and gives my work a naturally human-centered edge.</p>`
       },
       design: {
         icon: <DesignIcon />,
         title: 'Design',
-        body: `<p>My design journey started in <strong>2018</strong> with my first part-time job as a graphic designer. That year taught me how important design is for communicating ideas clearly and fast. I took on freelance projects across <strong>Illustrator, After Effects, and Figma</strong>, which helped me build a solid foundation.</p><p>Since then, I've created full design systems and brand identities for different clients. One example is <strong>Bloom Bakehouse</strong>, where I worked on everything from the logo and packaging to brand guidelines that improved their presence. I also created the full visual identity for <strong>Cognixa</strong> across digital and physical touchpoints.</p><p>Most recently, at <strong>Settlin</strong>, a proptech company, I worked as a <u>UI/UX Designer for nine months</u>. I refined user flows, built scalable design systems, designed their pitch deck, and worked closely with engineers to make sure everything shipped properly. I also designed parts of their internal CMS and mobile app.</p><p>I combined design, code, and research in <strong>Prism</strong>, my color palette generator based on perceptual color science. It creates visually consistent palettes that make sense to both designers and developers.</p>`
+        body: `<p>My design journey started in <strong>2018</strong> with my first part-time job as a graphic designer. That year taught me how important design is for communicating ideas clearly and fast. I took on freelance projects across <strong>Illustrator, After Effects, and Figma</strong>, which helped me build a solid foundation.</p><p>Since then, I've created full design systems and brand identities for different clients. One example is <u data-project="mobile-app">Bloom Bakehouse</u>, where I worked on everything from the logo and packaging to brand guidelines that improved their presence. I also created the full visual identity for <u data-project="cognixa">Cognixa</u> encompassing range across digital and physical touchpoints.</p><p>Most recently, at <u data-project="settlin">Settlin</u>, a proptech company, I worked as a <strong>UI/UX Designer</strong> for nine months. I refined user flows, built scalable design systems, designed their pitch deck, and worked closely with engineers to make sure everything shipped properly. I also designed parts of their internal CMS and mobile app.</p><p>I combined design, code, and research in <u data-project="animation-library">Prism</u>, my color palette generator based on perceptual color science. It creates visually consistent palettes that make sense to both designers and developers.</p>`
       },
       code: {
         icon: <CodeIcon />,
         title: 'Code',
-        body: `<p>My development journey began in <strong>2019</strong> with <strong>UBU Community</strong>, my first paid web project, which was a static site built with <strong>HTML, CSS, and vanilla code</strong>. That project strengthened my basics in layouts, states, interactions, and animations.</p><p>At <strong>Settlin</strong>, I reached a milestone that meant a lot to me: <u>shipping production Flutter screens even though my role was primarily design-focused</u>. This helped close the gap between design and engineering and delivered real business value when resources were tight. I've also contributed <strong>React code</strong> at Settlin and built <strong>Cognixa</strong> entirely on a React architecture.</p><p>While I don't consider myself a highly advanced engineer, <u>I naturally think in systems</u>. That helps reduce friction between design and development and speeds up how projects move.</p><p><strong>Prism</strong> is where my technical and design skills meet. It uses perceptual color science, has integrated analytics and behavior tracking, and exports palettes in formats that are actually useful in daily design work.</p><p>My engineering approach focuses on problem-solving instead of complexity. I care about clarity, user impact, and business outcomes, which helps me contribute meaningfully even outside traditional design boundaries.</p>`
+        body: `<p>My development journey began in <strong>2019</strong> with <u data-project="">UBU Community</u>, my first paid web project, which was a static site built with <strong>HTML, CSS, and native code</strong>. That project strengthened my basics in layouts, states, interactions, and animations.</p><p>At <u data-project="settlin">Settlin</u>, I reached a milestone that meant a lot to me: shipping production Flutter screens even though my role was primarily design-focused. This helped close the gap between design and engineering and delivered real business value when resources were tight.</p><p>I've also contributed <strong>React</strong> code at Settlin and built <u data-project="cognixa">Cognixa</u> entirely on a React architecture. While I don't consider myself a highly advanced engineer, I naturally think in systems. That helps reduce friction between design and development and speeds up how projects move.</p><p><u data-project="animation-library">Prism</u> is where my technical and design skills meet. It uses perceptual color science, has integrated analytics and behavior tracking, and exports palettes in formats that are actually useful in daily design work.</p><p>My engineering approach focuses on problem-solving instead of complexity. I care about clarity, user impact, and business outcomes, which helps me contribute meaningfully even outside traditional design boundaries.</p>`
       }
     };
     return data[section];
@@ -3035,7 +3073,7 @@ function PortfolioApp() {
           'Achieved 85% user retention rate',
           'Built scalable architecture supporting 10K+ users'
         ],
-        color: '#ff0000' // Red
+        color: '#F4D7C4' // Red
       },
       settlin: {
         learnings: [
@@ -3050,7 +3088,7 @@ function PortfolioApp() {
           'Reduced support tickets by 55%',
           'Successfully onboarded 50+ enterprise clients'
         ],
-        color: '#00ff00' // Green
+        color: '#C73C3B' // Green
       },
       project3: {
         learnings: [
@@ -3065,7 +3103,7 @@ function PortfolioApp() {
           'Improved page load speed by 70%',
           'Created reusable component library'
         ],
-        color: '#0000ff' // Blue
+        color: '#C6D4E6' // Blue
       }
     };
     return projects[projectId];
@@ -3079,16 +3117,16 @@ function PortfolioApp() {
   const getMiniProjectData = (projectId) => {
     const projects = {
       'animation-library': {
-        color: '#9b59b6' // Purple
+        color: '#E6E6E6' // Purple
       },
       'data-viz': {
-        color: '#ff9500' // Orange
+        color: '#76E2E4' // Orange
       },
       'mobile-app': {
-        color: '#00d4aa' // Teal
+        color: '#EBDCC9' // Teal
       },
       'ai-chat': {
-        color: '#ffd700' // Yellow
+        color: '#013301' // Yellow
       }
     };
     return projects[projectId];
@@ -3717,6 +3755,43 @@ function PortfolioApp() {
     }
   }, [isMuted]);
 
+  // Handle clicks on underlined project links in About section
+  useEffect(() => {
+    const handleProjectLinkClick = (e) => {
+      const target = e.target;
+      if (target.tagName === 'U' && target.hasAttribute('data-project')) {
+        const projectId = target.getAttribute('data-project');
+        if (!projectId) return; // Skip if no project ID
+        
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Map project IDs to overlay setters
+        const overlayMap = {
+          'cognixa': () => setShowCognixaOverlay(true),
+          'settlin': () => setShowSettlinOverlay(true),
+          'mobile-app': () => setShowMobileAppOverlay(true),
+          'animation-library': () => setShowPrismOverlay(true),
+          'data-viz': () => setShowDataVizOverlay(true),
+          'ai-chat': () => setShowAIChatOverlay(true)
+        };
+        
+        const openOverlay = overlayMap[projectId];
+        if (openOverlay) {
+          openOverlay();
+        }
+      }
+    };
+
+    const detailBody = document.querySelector('.detail-body');
+    if (detailBody) {
+      detailBody.addEventListener('click', handleProjectLinkClick);
+      return () => {
+        detailBody.removeEventListener('click', handleProjectLinkClick);
+      };
+    }
+  }, [activeSection]);
+
   return (
     <>
       <div>
@@ -3851,11 +3926,11 @@ function PortfolioApp() {
             <LightRays
               raysOrigin="top-center"
               raysColor={getProjectColor(hoveredProject)}
-              raysSpeed={1.5}
-              lightSpread={0.8}
-              rayLength={1.2}
+              raysSpeed={3}
+              lightSpread={2}
+              rayLength={2}
               followMouse={true}
-              mouseInfluence={0.1}
+              mouseInfluence={1}
               noiseAmount={0.1}
               distortion={0.05}
               className="project-light-rays"
@@ -3907,26 +3982,20 @@ function PortfolioApp() {
                     thirdProjectHoveredFor1sRef.current = false;
                   }
                 }}
+                onClick={() => setShowCognixaOverlay(true)}
                 style={debugMode ? { border: '2px solid red' } : {}}
               >
-                <Link
-                  to="/cognixa"
-                  className="project-card-link"
-                  onClick={(e) => {
-                    // Navigation happens on click
-                    e.stopPropagation();
-                  }}
-                >
+                <div className="project-card-link">
                   <div className="project-rectangle" style={debugMode ? { border: '2px solid darkred' } : {}}>
                     <img
-                      src={cognixaNonHovered}
+                      src={COGNIXA_NON_HOVERED}
                       alt="Cognixa Project"
                       className="project-thumbnail project-thumbnail-base"
                       loading="eager"
                       decoding="async"
                     />
                     <img
-                      src={cognixaHovered}
+                      src={COGNIXA_HOVERED}
                       alt="Cognixa Project"
                       className="project-thumbnail project-thumbnail-hover"
                       loading="eager"
@@ -3940,7 +4009,7 @@ function PortfolioApp() {
                     <p className="project-subtitle" style={debugMode ? { border: '2px solid crimson' } : {}}>Solo Founded AI SaaS App for Mental health Professionals that helps them streamline their workflow</p>
                     <ProjectArrow />
                   </div>
-                </Link>
+                </div>
               </div>
 
               <div
@@ -3962,17 +4031,26 @@ function PortfolioApp() {
                     thirdProjectHoveredFor1sRef.current = false;
                   }
                 }}
+                onClick={() => setShowSettlinOverlay(true)}
                 style={debugMode ? { border: '2px solid green' } : {}}
               >
-                <Link
-                  to="/settlin"
-                  className="project-card-link"
-                  onClick={(e) => {
-                    // Navigation happens on click
-                    e.stopPropagation();
-                  }}
-                >
-                  <div className="project-rectangle" style={debugMode ? { border: '2px solid darkgreen' } : {}}></div>
+                <div className="project-card-link">
+                  <div className="project-rectangle" style={debugMode ? { border: '2px solid darkgreen' } : {}}>
+                    <img
+                      src={SETTLIN_NON_HOVERED}
+                      alt="Settlin Project"
+                      className="project-thumbnail project-thumbnail-base"
+                      loading="eager"
+                      decoding="async"
+                    />
+                    <img
+                      src={SETTLIN_HOVERED}
+                      alt="Settlin Project"
+                      className="project-thumbnail project-thumbnail-hover"
+                      loading="eager"
+                      decoding="async"
+                    />
+                  </div>
                   <div className="project-info" style={debugMode ? { border: '2px solid forestgreen' } : {}}>
                     <div className="project-title-wrapper">
                       <h3 className="project-title" style={debugMode ? { border: '2px solid seagreen' } : {}}>Settlin</h3>
@@ -3980,7 +4058,7 @@ function PortfolioApp() {
                     <p className="project-subtitle" style={debugMode ? { border: '2px solid mediumseagreen' } : {}}>My time as UI/UX Designer where I pushed code, thought strategically and designed objectively</p>
                     <ProjectArrow />
                   </div>
-                </Link>
+                </div>
               </div>
 
               <div
@@ -4002,25 +4080,34 @@ function PortfolioApp() {
                     thirdProjectHoveredFor1sRef.current = false;
                   }
                 }}
+                onClick={() => setShowPravahOverlay(true)}
                 style={debugMode ? { border: '2px solid blue' } : {}}
               >
-                <Link
-                  to="/settlin"
-                  className="project-card-link"
-                  onClick={(e) => {
-                    // Navigation happens on click
-                    e.stopPropagation();
-                  }}
-                >
-                  <div className="project-rectangle" style={debugMode ? { border: '2px solid darkblue' } : {}}></div>
+                <div className="project-card-link">
+                  <div className="project-rectangle" style={debugMode ? { border: '2px solid darkblue' } : {}}>
+                    <img
+                      src={PRAVAH_NON_HOVERED}
+                      alt="Pravah Project"
+                      className="project-thumbnail project-thumbnail-base"
+                      loading="eager"
+                      decoding="async"
+                    />
+                    <img
+                      src={PRAVAH_HOVERED}
+                      alt="Pravah Project"
+                      className="project-thumbnail project-thumbnail-hover"
+                      loading="eager"
+                      decoding="async"
+                    />
+                  </div>
                   <div className="project-info" style={debugMode ? { border: '2px solid steelblue' } : {}}>
                     <div className="project-title-wrapper">
                       <h3 className="project-title" style={debugMode ? { border: '2px solid royalblue' } : {}}>Pravah</h3>
                     </div>
-                    <p className="project-subtitle" style={debugMode ? { border: '2px solid dodgerblue' } : {}}>Health app that</p>
+                    <p className="project-subtitle" style={debugMode ? { border: '2px solid dodgerblue' } : {}}>Designed UI/UX for an AI based health app that focusses on behavior based customisation                    </p>
                     <ProjectArrow />
                   </div>
-                </Link>
+                </div>
               </div>
             </div>
           </div>
@@ -4037,7 +4124,7 @@ function PortfolioApp() {
         </div>
         <div className="mini-projects-container">
           {/* Invisible viewport container - this is the black rectangle reference */}
-          <div className={`mini-projects-viewport-container ${hoveredMiniProject && isMiniProjectsInView ? 'dark-mode' : ''}`}>
+          <div className={`mini-projects-viewport-container ${hoveredMiniProject && isMiniProjectsInView && !lastMiniProjectHoveredFor1s ? 'dark-mode' : ''}`}>
             {hoveredMiniProject && isMiniProjectsInView && showMiniAurora && (
               <div className="aurora-wrapper aurora-staggered">
                 <Aurora
@@ -4054,8 +4141,8 @@ function PortfolioApp() {
             )}
             <div className="mini-projects-track">
               <div className="mini-projects-wrapper">
-                <Link
-                  to="/animation-library"
+                <div
+                  onClick={() => setShowPrismOverlay(true)}
                   className={`mini-project-card purple-project ${hoveredMiniProject === 'animation-library' ? 'hovered' : ''}`}
                   onMouseEnter={() => handleMiniProjectHover('animation-library')}
                   onMouseLeave={() => {
@@ -4077,9 +4164,9 @@ function PortfolioApp() {
                   }}
                 >
                   <div className="mini-project-rectangle">
-                    <img 
-                      src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/Prism/Prism%20Logo.png" 
-                      alt="Prism Logo" 
+                    <img
+                      src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/Prism/Prism%20Logo.png"
+                      alt="Prism Logo"
                       className="mini-project-image"
                     />
                   </div>
@@ -4088,10 +4175,10 @@ function PortfolioApp() {
                     <p className="mini-project-subtitle">Figma Plugin</p>
                   </div>
                   <p className="mini-project-body">A Figma plugin that builds perceptually balanced, sRGB-safe OKLCH color systems with real-time accessibility checks. Designers get cleaner palettes, and developers get synced variables across CSS, Tailwind, React and tokens.</p>
-                </Link>
+                </div>
 
-                <Link
-                  to="/data-viz"
+                <div
+                  onClick={() => setShowDataVizOverlay(true)}
                   className={`mini-project-card orange-project ${hoveredMiniProject === 'data-viz' ? 'hovered' : ''}`}
                   onMouseEnter={() => handleMiniProjectHover('data-viz')}
                   onMouseLeave={() => {
@@ -4112,16 +4199,22 @@ function PortfolioApp() {
                     }
                   }}
                 >
-                  <div className="mini-project-rectangle"></div>
+                  <div className="mini-project-rectangle">
+                    <img
+                      src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/JARVIS/logo.png"
+                      alt="JARVIS Logo"
+                      className="mini-project-image"
+                    />
+                  </div>
                   <div className="mini-project-info">
                     <h3 className="mini-project-title">Jarvis Assistant</h3>
                     <p className="mini-project-subtitle">Self hosted deployable AI</p>
                   </div>
-                  <p className="mini-project-body">An intelligent AI assistant that can be self-hosted and deployed on your own infrastructure. Built with privacy and customization in mind, offering full control over your AI interactions.</p>
-                </Link>
+                  <p className="mini-project-body">Everyone knows by now that context drives AI quality. ChatGPT's memory features and user context layers prove that more background information yields better outputs. The equation is simple: regardless of which model or parameters you're running, richer context produces more useful results.</p>
+                </div>
 
-                <Link
-                  to="/mobile-app"
+                <div
+                  onClick={() => setShowMobileAppOverlay(true)}
                   className={`mini-project-card teal-project ${hoveredMiniProject === 'mobile-app' ? 'hovered' : ''}`}
                   onMouseEnter={() => handleMiniProjectHover('mobile-app')}
                   onMouseLeave={() => {
@@ -4142,16 +4235,22 @@ function PortfolioApp() {
                     }
                   }}
                 >
-                  <div className="mini-project-rectangle"></div>
+                  <div className="mini-project-rectangle">
+                    <img
+                      src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/Bloom/Bloom%20Logo.png"
+                      alt="Bloom Logo"
+                      className="mini-project-image"
+                    />
+                  </div>
                   <div className="mini-project-info">
                     <h3 className="mini-project-title">Bloom Bakehouse</h3>
                     <p className="mini-project-subtitle">Cafe Design Project</p>
                   </div>
-                  <p className="mini-project-body">A complete cafe design project featuring modern UI/UX principles. Includes branding, menu design, and digital ordering system with a focus on user experience and visual appeal.</p>
-                </Link>
+                  <p className="mini-project-body">Somewhere around 2018, every bakery started looking the same. A peachy palette and a serif font that was very standardised. Instagram turned bakeries into content studios that sold bread. The aesthetic worked until it was popularised. When everything signals premium through identical visual language, it loses it's essence.</p>
+                </div>
 
-                <Link
-                  to="/ai-chat"
+                <div
+                  onClick={() => setShowAIChatOverlay(true)}
                   className={`mini-project-card yellow-project ${hoveredMiniProject === 'ai-chat' ? 'hovered' : ''}`}
                   onMouseEnter={() => handleMiniProjectHover('ai-chat')}
                   onMouseLeave={() => {
@@ -4172,13 +4271,19 @@ function PortfolioApp() {
                     }
                   }}
                 >
-                  <div className="mini-project-rectangle"></div>
+                  <div className="mini-project-rectangle">
+                    <img
+                      src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/CL/Conscious%20Living%20Logo.png"
+                      alt="Conscious Living Logo"
+                      className="mini-project-image"
+                    />
+                  </div>
                   <div className="mini-project-info">
                     <h3 className="mini-project-title">Conscious Living</h3>
                     <p className="mini-project-subtitle">Spearheading Online Sales</p>
                   </div>
-                  <p className="mini-project-body">A strategic e-commerce redesign that transformed online sales performance. Focused on conversion optimization, user journey mapping, and creating an intuitive shopping experience.</p>
-                </Link>
+                  <p className="mini-project-body">During my time as part of the core team at Conscious Living Store, I took on the responsibility of building and launching their e-commerce platform using Shopify, working toward a mission that went far beyond simply selling products online. The company exists to accelerate the world's adoption of conscious, everyday products that exist in harmony with nature, but what made this particularly challenging and interesting was the need to make that transition feel completely seamless for customers.</p>
+                </div>
               </div>
             </div>
           </div>
@@ -4226,6 +4331,155 @@ function PortfolioApp() {
           </div>
         </div>
       </section>
+
+      {/* Prism Overlay */}
+      {showPrismOverlay && (
+        <div className="project-overlay" onClick={(e) => {
+          if (e.target.classList.contains('project-overlay')) {
+            setShowPrismOverlay(false);
+          }
+        }}>
+          <div className="project-overlay-content">
+            <button 
+              className="project-overlay-close"
+              onClick={() => setShowPrismOverlay(false)}
+              aria-label="Close overlay"
+            >
+              ×
+            </button>
+            <div className="project-overlay-inner">
+              <AnimationLibraryProject />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* JARVIS Overlay */}
+      {showDataVizOverlay && (
+        <div className="project-overlay" onClick={(e) => {
+          if (e.target.classList.contains('project-overlay')) {
+            setShowDataVizOverlay(false);
+          }
+        }}>
+          <div className="project-overlay-content">
+            <button 
+              className="project-overlay-close"
+              onClick={() => setShowDataVizOverlay(false)}
+              aria-label="Close overlay"
+            >
+              ×
+            </button>
+            <div className="project-overlay-inner">
+              <DataVizProject />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showMobileAppOverlay && (
+        <div className="project-overlay" onClick={(e) => {
+          if (e.target.classList.contains('project-overlay')) {
+            setShowMobileAppOverlay(false);
+          }
+        }}>
+          <div className="project-overlay-content">
+            <button 
+              className="project-overlay-close"
+              onClick={() => setShowMobileAppOverlay(false)}
+              aria-label="Close overlay"
+            >
+              ×
+            </button>
+            <div className="project-overlay-inner">
+              <MobileAppProject />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCognixaOverlay && (
+        <div className="project-overlay" onClick={(e) => {
+          if (e.target.classList.contains('project-overlay')) {
+            setShowCognixaOverlay(false);
+          }
+        }}>
+          <div className="project-overlay-content">
+            <button 
+              className="project-overlay-close"
+              onClick={() => setShowCognixaOverlay(false)}
+              aria-label="Close overlay"
+            >
+              ×
+            </button>
+            <div className="project-overlay-inner">
+              <CognixaProject />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSettlinOverlay && (
+        <div className="project-overlay" onClick={(e) => {
+          if (e.target.classList.contains('project-overlay')) {
+            setShowSettlinOverlay(false);
+          }
+        }}>
+          <div className="project-overlay-content">
+            <button 
+              className="project-overlay-close"
+              onClick={() => setShowSettlinOverlay(false)}
+              aria-label="Close overlay"
+            >
+              ×
+            </button>
+            <div className="project-overlay-inner">
+              <SettlinProject />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAIChatOverlay && (
+        <div className="project-overlay" onClick={(e) => {
+          if (e.target.classList.contains('project-overlay')) {
+            setShowAIChatOverlay(false);
+          }
+        }}>
+          <div className="project-overlay-content">
+            <button 
+              className="project-overlay-close"
+              onClick={() => setShowAIChatOverlay(false)}
+              aria-label="Close overlay"
+            >
+              ×
+            </button>
+            <div className="project-overlay-inner">
+              <AIChatProject />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPravahOverlay && (
+        <div className="project-overlay" onClick={(e) => {
+          if (e.target.classList.contains('project-overlay')) {
+            setShowPravahOverlay(false);
+          }
+        }}>
+          <div className="project-overlay-content">
+            <button 
+              className="project-overlay-close"
+              onClick={() => setShowPravahOverlay(false)}
+              aria-label="Close overlay"
+            >
+              ×
+            </button>
+            <div className="project-overlay-inner">
+              <PravahProject />
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

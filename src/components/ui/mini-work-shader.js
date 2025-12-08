@@ -126,10 +126,10 @@ const MiniWorkShader = ({ isActive, color = 'purple' }) => {
 
     // Set up color mapping
       const colorMap = {
-        purple: [0.545, 0.361, 0.965], // #8B5CF6
-        orange: [0.976, 0.451, 0.086], // #F97316
-        teal: [0.078, 0.722, 0.651],   // #14B8A6
-        yellow: [0.918, 0.702, 0.031]  // #EAB308
+        purple: [0.902, 0.902, 0.902], // #E6E6E6
+        orange: [0.463, 0.886, 0.894], // #76E2E4
+        teal: [0.922, 0.863, 0.788],   // #EBDCC9
+        yellow: [0.004, 0.200, 0.004]  // #013301
       };
 
       let startTime = Date.now();
