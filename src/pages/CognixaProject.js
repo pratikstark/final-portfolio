@@ -134,6 +134,8 @@ const CognixaProject = () => {
             src="https://cdn.pratiksinghal.in/Projects%20Aseets/Cognixa/Screenshot%202025-12-08%20at%202.33.58%E2%80%AFAM.png" 
             alt="Cognixa Market Context"
             className="project-image"
+            loading="lazy"
+            decoding="async"
           />
         </div>
 
@@ -188,6 +190,8 @@ const CognixaProject = () => {
             src="https://cdn.pratiksinghal.in/Projects%20Aseets/Cognixa/Screenshot%202025-12-08%20at%202.34.15%E2%80%AFAM.png" 
             alt="Cognixa Design System"
             className="project-image"
+            loading="lazy"
+            decoding="async"
           />
         </div>
 
@@ -254,6 +258,8 @@ const CognixaProject = () => {
             src="https://cdn.pratiksinghal.in/Projects%20Aseets/Cognixa/Screenshot%202025-12-08%20at%202.34.41%E2%80%AFAM.png" 
             alt="Cognixa Iteration"
             className="project-image"
+            loading="lazy"
+            decoding="async"
           />
         </div>
 

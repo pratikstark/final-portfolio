@@ -155,6 +155,8 @@ const AIChatProject = () => {
             src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/CL/Screenshot%202025-12-04%20at%207.42.33%E2%80%AFAM.png" 
             alt="Conscious Living Store"
             className="project-image"
+            loading="lazy"
+            decoding="async"
           />
         </div>
 
@@ -178,6 +180,8 @@ const AIChatProject = () => {
             src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/CL/Screenshot%202025-12-08%20at%2012.44.45%E2%80%AFAM.png" 
             alt="Conscious Living Architecture"
             className="project-image"
+            loading="lazy"
+            decoding="async"
           />
         </div>
 

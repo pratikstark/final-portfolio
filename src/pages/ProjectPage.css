@@ -188,6 +188,9 @@
 .image-container {
   margin: 48px 0 !important;
   width: 100% !important;
+  aspect-ratio: 16 / 9;
+  min-height: 400px;
+  position: relative;
 }
 
 .project-overlay-inner .project-image,
@@ -195,6 +198,8 @@
   width: 100% !important;
   height: auto !important;
   display: block !important;
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
   border-radius: 0 !important;
   box-shadow: none !important;
   border: none !important;

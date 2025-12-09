@@ -157,6 +157,8 @@ const MobileAppProject = () => {
             src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/Bloom/iPad%20Pro%2012.9_%20-%202.png" 
             alt="Bloom Color Palette"
             className="project-image"
+            loading="lazy"
+            decoding="async"
           />
         </div>
 
@@ -185,6 +187,8 @@ const MobileAppProject = () => {
             src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/Bloom/iPad%20Pro%2012.9_%20-%204.png" 
             alt="Bloom Branding"
             className="project-image"
+            loading="lazy"
+            decoding="async"
           />
         </div>
 
@@ -204,6 +208,8 @@ const MobileAppProject = () => {
             src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/Bloom/iPad%20Pro%2012.9_%20-%203.png" 
             alt="Bloom Packaging"
             className="project-image"
+            loading="lazy"
+            decoding="async"
           />
         </div>
 

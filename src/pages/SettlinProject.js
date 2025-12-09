@@ -146,6 +146,8 @@ const SettlinProject = () => {
             src="https://cdn.pratiksinghal.in/Projects%20Aseets/Settlin/Scene.png" 
             alt="Settlin Preferences Flow"
             className="project-image"
+            loading="lazy"
+            decoding="async"
           />
         </div>
 
@@ -166,6 +168,8 @@ const SettlinProject = () => {
             src="https://cdn.pratiksinghal.in/Projects%20Aseets/Settlin/Screenshot%202025-12-08%20at%206.19.01%E2%80%AFPM.png" 
             alt="Settlin Design System"
             className="project-image"
+            loading="lazy"
+            decoding="async"
           />
         </div>
 
@@ -195,6 +199,8 @@ const SettlinProject = () => {
             src="https://cdn.pratiksinghal.in/Projects%20Aseets/Settlin/Scene-1.png" 
             alt="Settlin Development"
             className="project-image"
+            loading="lazy"
+            decoding="async"
           />
         </div>
 

@@ -1731,6 +1731,15 @@ function PortfolioApp() {
         return;
       }
 
+      // Ensure section has fixed dimensions before ScrollTrigger initializes
+      // This prevents layout shifts during pinning
+      const sectionHeight = miniProjectsSection.offsetHeight;
+      if (sectionHeight > 0) {
+        miniProjectsSection.style.height = `${sectionHeight}px`;
+        miniProjectsSection.style.minHeight = `${sectionHeight}px`;
+        miniProjectsSection.style.maxHeight = `${sectionHeight}px`;
+      }
+
       const measureRequiredX = (cardIndex) => {
         const target = miniCards[cardIndex];
         if (!target) return 0;
@@ -1790,7 +1799,7 @@ function PortfolioApp() {
         const miniExitEndX = measureLeftmostX(lastIndex);
 
         // Initialize off to right for entry
-        gsap.set(miniProjectsWrapper, { x: miniEntryStartX });
+        gsap.set(miniProjectsWrapper, { x: miniEntryStartX, force3D: true });
 
         // Kill previous mini project triggers for idempotency
         ScrollTrigger.getAll().forEach(t => {
@@ -1831,13 +1840,13 @@ function PortfolioApp() {
             const easeFunc = gsap.parseEase("power2.out");
             const easedProgress = easeFunc(p);
             const x = gsap.utils.interpolate(miniEntryStartX, cardPositions[firstIndex], easedProgress);
-            gsap.set(miniProjectsWrapper, { x });
+            gsap.set(miniProjectsWrapper, { x, force3D: true });
             miniCards.forEach((card, index) => {
               gsap.to(card, { opacity: index === firstIndex ? 1 : 0.3, duration: 0.3 });
             });
           },
           onLeave: () => {
-            gsap.set(miniProjectsWrapper, { x: cardPositions[firstIndex] });
+            gsap.set(miniProjectsWrapper, { x: cardPositions[firstIndex], force3D: true });
             miniCards.forEach((card, index) => {
               gsap.to(card, { opacity: index === firstIndex ? 1 : 0.3, duration: 0.3 });
             });
@@ -1846,14 +1855,26 @@ function PortfolioApp() {
 
         // Mini projects pin with smooth scrolling and responsive snap
         if (!currentMiniProjectsSection || !currentMiniProjectsSection.isConnected) return;
+        
+        // Lock section dimensions before creating ScrollTrigger to prevent layout shifts
+        const lockedHeight = currentMiniProjectsSection.offsetHeight;
+        if (lockedHeight > 0) {
+          currentMiniProjectsSection.style.height = `${lockedHeight}px`;
+          currentMiniProjectsSection.style.minHeight = `${lockedHeight}px`;
+          currentMiniProjectsSection.style.maxHeight = `${lockedHeight}px`;
+        }
+        
         ScrollTrigger.create({
           id: 'mini-projects-scroll',
           trigger: currentMiniProjectsSection,
           start: 'top top',
           end: '+=600vh', // Reduced track for more responsive scrolling
           pin: true, // Re-enabled for scroll effects
+          pinSpacing: true,
           scrub: 0.5, // Match vertical scroll sensitivity for smooth transition
           anticipatePin: 1,
+          invalidateOnRefresh: false,
+          refreshPriority: -1,
           snap: {
             snapTo: (progress) => {
               // If scrolling down past last mini project (progress > 0.95), disable snap
@@ -2033,7 +2054,7 @@ function PortfolioApp() {
             }
 
             // Update wrapper position smoothly based on scroll
-            gsap.set(miniProjectsWrapper, { x: smoothX });
+            gsap.set(miniProjectsWrapper, { x: smoothX, force3D: true });
 
             // Update the currently centered project
             currentCenteredMiniProject = activeCardIndex;
@@ -2103,7 +2124,7 @@ function PortfolioApp() {
             fontSize: '10px'
           } : false,
           onEnter: () => {
-            gsap.set(miniProjectsWrapper, { x: cardPositions[lastIndex] });
+            gsap.set(miniProjectsWrapper, { x: cardPositions[lastIndex], force3D: true });
             miniCards.forEach((card, index) => {
               gsap.to(card, { opacity: index === lastIndex ? 1 : 0.3, duration: 0.2 });
             });
@@ -2116,7 +2137,7 @@ function PortfolioApp() {
             // Only slight movement - don't push users
             const lastCardPos = cardPositions[lastIndex] || cardPositions[2];
             const slightX = gsap.utils.interpolate(lastCardPos, lastCardPos - 50, easedProgress * 0.3);
-            gsap.set(miniProjectsWrapper, { x: slightX });
+            gsap.set(miniProjectsWrapper, { x: slightX, force3D: true });
             // Gentle opacity fade
             miniCards.forEach((card, index) => {
               const opacity = index === lastIndex ? 1 - (easedProgress * 0.2) : 0.3 - (easedProgress * 0.1);
@@ -4049,7 +4070,7 @@ function PortfolioApp() {
       {/* Pinned hero that transitions, then releases to normal scroll */}
       <section className="hero" style={debugMode ? { border: '2px solid red' } : {}}>
         <div className="video-container" ref={videoContainerRef} style={{ position: 'relative', ...(debugMode ? { border: '2px solid blue' } : {}) }}>
-          <video ref={videoRef} src="https://cdn.pratiksinghal.in/Final%20Preview.mp4" autoPlay muted={isMuted} playsInline loop style={{ height: '100%', objectFit: 'cover', ...(debugMode ? { border: '2px solid green' } : {}) }} />
+          <video ref={videoRef} src="https://cdn.pratiksinghal.in/Final%20Preview.mp4" autoPlay muted={isMuted} playsInline loop preload="metadata" style={{ height: '100%', width: '100%', objectFit: 'cover', ...(debugMode ? { border: '2px solid green' } : {}) }} />
 
           <button
             onClick={() => {

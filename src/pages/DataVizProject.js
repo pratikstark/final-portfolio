@@ -167,6 +167,8 @@ const DataVizProject = () => {
             src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/JARVIS/Screenshot%202025-12-06%20at%203.37.47%E2%80%AFPM.png" 
             alt="JARVIS Architecture Diagram"
             className="project-image"
+            loading="lazy"
+            decoding="async"
           />
         </div>
 
@@ -210,6 +212,8 @@ const DataVizProject = () => {
             src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/JARVIS/Screenshot%202025-12-06%20at%203.41.50%E2%80%AFPM.png" 
             alt="JARVIS Workflow"
             className="project-image"
+            loading="lazy"
+            decoding="async"
           />
         </div>
 
@@ -238,6 +242,8 @@ const DataVizProject = () => {
             src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/JARVIS/Screenshot%202025-12-06%20at%203.42.10%E2%80%AFPM.png" 
             alt="JARVIS Interface"
             className="project-image"
+            loading="lazy"
+            decoding="async"
           />
         </div>
 

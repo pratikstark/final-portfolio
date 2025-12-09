@@ -9,6 +9,7 @@
       content="Pratik's Portfolio"
     />
     <title>Pratik Singhal</title>
+    <link rel="preload" href="./assets/Nohemi-VF.ttf" as="font" type="font/ttf" crossorigin>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nohemi:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -46,21 +47,33 @@
       // Reset scroll position immediately on page load, before React loads
       (function() {
         window.scrollTo(0, 0);
-        document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0;
+        if (document.documentElement) {
+          document.documentElement.scrollTop = 0;
+        }
+        if (document.body) {
+          document.body.scrollTop = 0;
+        }
         
         // Also reset on page show (back/forward navigation)
         window.addEventListener('pageshow', function() {
           window.scrollTo(0, 0);
-          document.documentElement.scrollTop = 0;
-          document.body.scrollTop = 0;
+          if (document.documentElement) {
+            document.documentElement.scrollTop = 0;
+          }
+          if (document.body) {
+            document.body.scrollTop = 0;
+          }
         });
         
         // Reset on beforeunload to ensure clean state
         window.addEventListener('beforeunload', function() {
           window.scrollTo(0, 0);
-          document.documentElement.scrollTop = 0;
-          document.body.scrollTop = 0;
+          if (document.documentElement) {
+            document.documentElement.scrollTop = 0;
+          }
+          if (document.body) {
+            document.body.scrollTop = 0;
+          }
         });
       })();
     </script>

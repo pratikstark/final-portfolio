@@ -161,6 +161,8 @@ const PravahProject = () => {
             src="https://cdn.pratiksinghal.in/Projects%20Aseets/Pravah/Pravah%201.png" 
             alt="Pravah Design Principles"
             className="project-image"
+            loading="lazy"
+            decoding="async"
           />
         </div>
 
@@ -213,6 +215,8 @@ const PravahProject = () => {
             src="https://cdn.pratiksinghal.in/Projects%20Aseets/Pravah/Pravah%202.png" 
             alt="Pravah Interface"
             className="project-image"
+            loading="lazy"
+            decoding="async"
           />
         </div>
 

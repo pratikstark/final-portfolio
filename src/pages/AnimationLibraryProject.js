@@ -165,7 +165,7 @@ const AnimationLibraryProject = () => {
         </section>
 
         <div className="image-container" ref={el => imagesRef.current[0] = el}>
-          <img src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/Prism/Prism%20Image%201.png" alt="HSL Color Scale Comparison" className="project-image" />
+          <img src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/Prism/Prism%20Image%201.png" alt="HSL Color Scale Comparison" className="project-image" loading="lazy" decoding="async" />
         </div>
 
         <section className="content-section">
@@ -177,7 +177,7 @@ const AnimationLibraryProject = () => {
         </section>
 
         <div className="image-container" ref={el => imagesRef.current[1] = el}>
-          <img src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/Prism/Prism%20Image%202.png" alt="OKLCH Color Scale Comparison" className="project-image" />
+          <img src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/Prism/Prism%20Image%202.png" alt="OKLCH Color Scale Comparison" className="project-image" loading="lazy" decoding="async" />
         </div>
 
         <section className="content-section">
@@ -196,7 +196,7 @@ const AnimationLibraryProject = () => {
         </section>
 
         <div className="image-container" ref={el => imagesRef.current[2] = el}>
-          <img src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/Prism/Prism%20Image%203.png" alt="sRGB Compatibility Solution" className="project-image" />
+          <img src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/Prism/Prism%20Image%203.png" alt="sRGB Compatibility Solution" className="project-image" loading="lazy" decoding="async" />
         </div>
 
         <section className="content-section">
@@ -212,7 +212,7 @@ const AnimationLibraryProject = () => {
         </section>
 
         <div className="image-container" ref={el => imagesRef.current[3] = el}>
-          <img src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/Prism/Prism%20Image%204.png" alt="Prism UI Interface" className="project-image" />
+          <img src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/Prism/Prism%20Image%204.png" alt="Prism UI Interface" className="project-image" loading="lazy" decoding="async" />
         </div>
 
         <section className="content-section">
@@ -225,7 +225,7 @@ const AnimationLibraryProject = () => {
         </section>
 
         <div className="image-container" ref={el => imagesRef.current[4] = el}>
-          <img src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/Prism/Prism%20Image%205.png" alt="Multi-format Export Options" className="project-image" />
+          <img src="https://cdn.pratiksinghal.in/Mini%20Project%20Assets/Prism/Prism%20Image%205.png" alt="Multi-format Export Options" className="project-image" loading="lazy" decoding="async" />
         </div>
       </main>
 

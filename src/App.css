@@ -259,8 +259,8 @@ body {
   /* anchor to bottom in second state */
   left: 0;
   width: 100vw;
-  height: auto;
-  /* Hug content height */
+  height: 35vh;
+  /* Fixed height to prevent layout shift */
   display: grid;
   place-items: center;
   padding: 8px 20px clamp(12px, 2.5vw, 32px) 20px;
@@ -308,7 +308,7 @@ body {
   font-weight: 100 900;
   font-stretch: 75% 125%;
   font-style: normal;
-  font-display: swap;
+  font-display: optional;
 }
 
 /* Centralized Typography System */
@@ -2299,6 +2299,8 @@ body.debug-mode::after {
 .mini-projects {
   width: 100vw;
   height: 100vh;
+  min-height: 100vh;
+  max-height: 100vh;
   background-color: #f5f5f0;
   position: relative;
   overflow: hidden;
@@ -2308,6 +2310,9 @@ body.debug-mode::after {
   box-sizing: border-box;
   padding-bottom: 0;
   /* Bottom gutter handled by viewport container */
+  contain: layout style paint;
+  /* Prevent layout shifts from ScrollTrigger pinning */
+  isolation: isolate;
 }
 
 .mini-projects-header {
@@ -2347,6 +2352,8 @@ body.debug-mode::after {
   justify-content: center;
   box-sizing: border-box;
   /* Bottom spacing now comes from the child's margin-bottom (matches side gutters) */
+  min-height: 0;
+  contain: layout;
 }
 
 /* This is the invisible viewport container - the "purple rectangle" reference */
@@ -2358,6 +2365,8 @@ body.debug-mode::after {
   bottom: clamp(12px, 2.5vw, 32px);
   /* Bottom gutter equals side gutters */
   height: 70vh;
+  min-height: 70vh;
+  max-height: 70vh;
   /* Adjusted height to fit remaining space */
   background: transparent !important;
   /* Ensure transparent by default */
@@ -2365,14 +2374,15 @@ body.debug-mode::after {
   margin: 0;
 
   box-sizing: border-box;
-  overflow: visible;
-  /* Allow body text to extend below */
+  overflow: hidden;
+  /* Changed from visible to hidden to prevent layout shifts */
   z-index: 1;
   /* Low z-index but visible */
   pointer-events: none;
   /* Don't interfere with mouse events */
   transition: background-color 0.4s ease;
   /* Smooth transition from center */
+  contain: layout style paint;
 }
 
 .mini-projects-track {
@@ -2382,11 +2392,15 @@ body.debug-mode::after {
   align-items: center;
   justify-content: flex-start;
   position: relative;
-  overflow: visible;
-  /* Allow body text to extend below */
+  overflow: hidden;
+  /* Changed from visible to hidden to prevent layout shifts */
   box-sizing: border-box;
-  transform: translateY(-30px);
-  /* Shift up to account for body text below, centering the whole group */
+  transform: translate3d(0, -30px, 0);
+  /* Shift up to account for body text below, centering the whole group - use translate3d for GPU */
+  will-change: transform;
+  contain: layout;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .mini-projects-wrapper {
@@ -2399,6 +2413,14 @@ body.debug-mode::after {
   box-sizing: border-box;
   padding: 0 100px;
   /* Padding to ensure cards can be centered */
+  will-change: transform;
+  contain: layout;
+  position: relative;
+  /* Ensure wrapper doesn't cause layout shifts */
+  transform: translate3d(0, 0, 0);
+  /* Force GPU acceleration and prevent layout shifts */
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .mini-project-card {
