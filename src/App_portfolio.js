@@ -1334,6 +1334,15 @@ function PortfolioApp() {
       };
 
       const applyScrollLogic = () => {
+        // Re-check elements exist before proceeding
+        const currentProjectsSection = document.querySelector('.main-projects');
+        const currentProjectsWrapper = document.querySelector('.projects-wrapper');
+        const currentCards = Array.from(document.querySelectorAll('.project-card'));
+        
+        if (!currentProjectsSection || !currentProjectsWrapper || currentCards.length < 3) {
+          return;
+        }
+
         const cardPositions = [
           measureRequiredX(0), // First card centered
           measureRequiredX(1), // Second card centered  
@@ -1385,9 +1394,10 @@ function PortfolioApp() {
         });
 
         // Entry interaction: as the section scrolls into view, slide first project from rightmost to centered
+        if (!currentProjectsSection || !currentProjectsSection.isConnected) return;
         ScrollTrigger.create({
           id: 'projects-entry',
-          trigger: projectsSection,
+          trigger: currentProjectsSection,
           start: 'top bottom',   // section top hits bottom of viewport
           end: 'top top',        // section top reaches top (pin start)
           scrub: 0.5,            // Match vertical scroll sensitivity for smooth transition
@@ -1420,9 +1430,10 @@ function PortfolioApp() {
         });
 
         // Exit interaction: gentle fade-out when scrolling away - no push, just natural transition
+        if (!currentProjectsSection || !currentProjectsSection.isConnected) return;
         ScrollTrigger.create({
           id: 'projects-exit',
-          trigger: projectsSection,
+          trigger: currentProjectsSection,
           start: 'bottom top',   // when the section bottom reaches top (after pin ends)
           end: '+=20vh',         // Even shorter exit zone for less interference
           scrub: 0.5, // Match vertical scroll sensitivity for smooth transition
@@ -1458,9 +1469,10 @@ function PortfolioApp() {
 
 
         // Main projects pin with smooth scrolling and responsive snap
+        if (!currentProjectsSection || !currentProjectsSection.isConnected) return;
         ScrollTrigger.create({
           id: 'projects-scroll',
-          trigger: projectsSection,
+          trigger: currentProjectsSection,
           start: 'top top',
           end: '+=600vh', // Reduced track for more responsive scrolling
           pin: true, // Re-enabled for scroll effects
@@ -1734,6 +1746,15 @@ function PortfolioApp() {
       };
 
       const applyMiniScrollLogic = () => {
+        // Re-check elements exist before proceeding
+        const currentMiniProjectsSection = document.querySelector('.mini-projects');
+        const currentMiniProjectsWrapper = document.querySelector('.mini-projects-wrapper');
+        const currentMiniCards = Array.from(document.querySelectorAll('.mini-project-card'));
+        
+        if (!currentMiniProjectsSection || !currentMiniProjectsWrapper || currentMiniCards.length < 3) {
+          return;
+        }
+
         const cardPositions = [
           measureRequiredX(0), // First mini card centered
           measureRequiredX(1), // Second mini card centered  
@@ -1790,9 +1811,10 @@ function PortfolioApp() {
 
 
         // Entry slide: bring first mini project from right into center before pin starts
+        if (!currentMiniProjectsSection || !currentMiniProjectsSection.isConnected) return;
         ScrollTrigger.create({
           id: 'mini-projects-entry',
-          trigger: miniProjectsSection,
+          trigger: currentMiniProjectsSection,
           start: 'top bottom',
           end: 'top top',
           scrub: 0.5, // Match vertical scroll sensitivity for smooth transition
@@ -1823,9 +1845,10 @@ function PortfolioApp() {
         });
 
         // Mini projects pin with smooth scrolling and responsive snap
+        if (!currentMiniProjectsSection || !currentMiniProjectsSection.isConnected) return;
         ScrollTrigger.create({
           id: 'mini-projects-scroll',
-          trigger: miniProjectsSection,
+          trigger: currentMiniProjectsSection,
           start: 'top top',
           end: '+=600vh', // Reduced track for more responsive scrolling
           pin: true, // Re-enabled for scroll effects
@@ -2065,9 +2088,10 @@ function PortfolioApp() {
         });
 
         // Exit interaction: gentle fade-out when scrolling away - no push, just natural transition
+        if (!currentMiniProjectsSection || !currentMiniProjectsSection.isConnected) return;
         ScrollTrigger.create({
           id: 'mini-projects-exit',
-          trigger: miniProjectsSection,
+          trigger: currentMiniProjectsSection,
           start: 'bottom top',
           end: '+=20vh', // Even shorter exit zone for less interference
           scrub: 0.5, // Match vertical scroll sensitivity for smooth transition
