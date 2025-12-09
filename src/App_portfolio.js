@@ -4082,7 +4082,7 @@ function PortfolioApp() {
         </div>
 
         <div className="content-text" ref={contentTextRef} style={debugMode ? { border: '2px solid orange' } : {}}>
-          <div style={debugMode ? { border: '2px solid purple', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: 'fit-content', margin: '0 auto', gap: '0.5em' } : { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: 'fit-content', margin: '0 auto', gap: '0.5em' }}>
+          <div style={debugMode ? { border: '2px solid purple', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: 'fit-content', margin: '0 auto', gap: '0.15em' } : { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: 'fit-content', margin: '0 auto', gap: '0.15em' }}>
             <div className="body-large" style={{ display: 'flex', justifyContent: 'flex-start', width: '100%', ...(debugMode ? { border: '2px solid yellow', margin: 0 } : { margin: 0 }) }}>
               Hi there,
             </div>

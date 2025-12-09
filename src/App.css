@@ -263,8 +263,8 @@ body {
   /* Hug content height */
   display: grid;
   place-items: center;
-  padding: 24px 20px clamp(12px, 2.5vw, 32px) 20px;
-  /* Top: 24px, bottom: clamp(12px, 2.5vw, 32px) to match video top margin */
+  padding: 8px 20px clamp(12px, 2.5vw, 32px) 20px;
+  /* Top: 8px, bottom: clamp(12px, 2.5vw, 32px) to match video top margin */
   text-align: center;
   z-index: 2;
   background-color: #f5f5f0;
