@@ -118,12 +118,22 @@ const DataVizProject = () => {
           <div className="hero-badge">Mini Project</div>
           <h1 className="hero-title">JARVIS</h1>
           <p className="hero-subtitle">
-            Everyone knows by now that context drives AI quality. ChatGPT's memory features and user context layers prove that more background information yields better outputs. The equation is simple: regardless of which model or parameters you're running, richer context produces more useful results.
+          A fully local AI assistant built with Whisper, Ollama, Piper and n8n running inside a Docker stack. It handles voice, automation, and system actions entirely on-device for total privacy and customisation.
           </p>
           <div className="hero-meta">
             <span className="meta-item">AI Assistant</span>
             <span className="meta-item">Self-Hosted</span>
             <span className="meta-item">Privacy-Focused</span>
+          </div>
+          <div style={{ marginTop: '24px' }}>
+            <a 
+              href="https://github.com/pratikstark/jarvis-ai-agent" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              style={{ color: '#111', textDecoration: 'underline', fontSize: '16px', fontFamily: 'var(--font-body)' }}
+            >
+              Click here to view the project on GitHub
+            </a>
           </div>
         </div>
       </section>
@@ -131,6 +141,9 @@ const DataVizProject = () => {
       <main className="project-content" ref={contentRef}>
         <section className="content-section">
           <div className="section-content">
+            <p className="body-base">
+              Everyone knows by now that context drives AI quality. ChatGPT's memory features and user context layers prove that more background information yields better outputs. The equation is simple: regardless of which model or parameters you're running, richer context produces more useful results.
+            </p>
             <p className="body-base">
               But context has two fundamental problems. First, privacy. I don't want my entire digital life - files, personal data, browser history or half-formed ideas stored on someone else's infrastructure. Second, depth and variety. Real personalization isn't just a feature but it's patterns, contradictions, the specific texture of how you think and work. Building that through prompts or memory APIs is expensive in tokens and always incomplete.
             </p>

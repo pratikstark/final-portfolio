@@ -28,7 +28,6 @@ class ErrorBoundary extends React.Component {
       error.message?.includes("The node to be removed is not a child")
     ) {
       // Suppress this specific error - it's a GSAP/React sync issue during cleanup
-      console.warn('Suppressed removeChild DOM error');
       // Return false hasError so the error doesn't show
       return { hasError: false, error: null };
     }
@@ -41,7 +40,7 @@ class ErrorBoundary extends React.Component {
       !error.message?.includes("Failed to execute 'removeChild'") &&
       !error.message?.includes("The node to be removed is not a child")
     ) {
-      console.error('Uncaught error:', error, errorInfo);
+      // Uncaught error
     }
   }
 

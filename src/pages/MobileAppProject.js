@@ -118,7 +118,7 @@ const MobileAppProject = () => {
           <div className="hero-badge">Mini Project</div>
           <h1 className="hero-title">Bloom Bakehouse</h1>
           <p className="hero-subtitle">
-            Somewhere around 2018, every bakery started looking the same. A peachy palette and a serif font that was very standardised. Instagram turned bakeries into content studios that sold bread. The aesthetic worked until it was popularised. When everything signals premium through identical visual language, it loses it's essence.
+          A bakery identity designed for tier-3 India balancing approachability with premium cues, and culturally grounded design choices.
           </p>
           <div className="hero-meta">
             <span className="meta-item">Branding</span>
@@ -131,6 +131,9 @@ const MobileAppProject = () => {
       <main className="project-content" ref={contentRef}>
         <section className="content-section">
           <div className="section-content">
+            <p className="body-base">
+              Somewhere around 2018, every bakery started looking the same. A peachy palette and a serif font that was very standardised. Instagram turned bakeries into content studios that sold bread. The aesthetic worked until it was popularised. When everything signals premium through identical visual language, it loses it's essence.
+            </p>
             <p className="body-base">
               I watched this saturation happen in real-time across tier 1 cities like Mumbai, Bangalore, Delhi. By 2023, you could walk into any modern bakery in a tier-1 city, and know exactly what you'd see: pastel walls, marble counters and a specific shade of dusty rose on the packaging. The design had become a boring monotonous template.
             </p>

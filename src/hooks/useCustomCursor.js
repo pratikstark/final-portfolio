@@ -23,7 +23,7 @@ export const useCustomCursor = () => {
         // Use modern DOM API instead of removeChild
         existingCursor.remove();
       } catch (error) {
-        console.warn('Could not remove existing cursor:', error);
+        // Could not remove existing cursor
       }
     }
     if (existingTrail) {
@@ -31,7 +31,7 @@ export const useCustomCursor = () => {
         // Use modern DOM API instead of removeChild
         existingTrail.remove();
       } catch (error) {
-        console.warn('Could not remove existing trail:', error);
+        // Could not remove existing trail
       }
     }
 

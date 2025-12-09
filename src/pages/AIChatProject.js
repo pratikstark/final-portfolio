@@ -118,12 +118,22 @@ const AIChatProject = () => {
           <div className="hero-badge">Mini Project</div>
           <h1 className="hero-title">Conscious Living</h1>
           <p className="hero-subtitle">
-            During my time as part of the core team at Conscious Living Store, I took on the responsibility of building and launching their e-commerce platform using Shopify, working toward a mission that went far beyond simply selling products online. The company exists to accelerate the world's adoption of conscious, everyday products that exist in harmony with nature, but what made this particularly challenging and interesting was the need to make that transition feel completely seamless for customers.
+          A full Shopify build that connected product storytelling with clear navigation, optimized checkout, and sustainable product presentation
           </p>
           <div className="hero-meta">
             <span className="meta-item">E-Commerce</span>
             <span className="meta-item">Shopify</span>
             <span className="meta-item">UX Design</span>
+          </div>
+          <div style={{ marginTop: '24px' }}>
+            <a 
+              href="https://consciousliving.store/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              style={{ color: '#111', textDecoration: 'underline', fontSize: '16px', fontFamily: 'var(--font-body)' }}
+            >
+              Click here to view the store
+            </a>
           </div>
         </div>
       </section>
@@ -131,6 +141,9 @@ const AIChatProject = () => {
       <main className="project-content" ref={contentRef}>
         <section className="content-section">
           <div className="section-content">
+          <p className="body-base">
+            During my time as part of the core team at Conscious Living Store, I took on the responsibility of building and launching their e-commerce platform using Shopify, working toward a mission that went far beyond simply selling products online. The company exists to accelerate the world's adoption of conscious, everyday products that exist in harmony with nature, but what made this particularly challenging and interesting was the need to make that transition feel completely seamless for customers.
+            </p>
             <p className="body-base">
               I approached the project by setting up the Shopify store from the ground up, which meant starting with fundamental decisions about how the site would look and function. I configured all the essential e-commerce functionality that makes online shopping possible, including the product catalog system, the shopping cart experience, and the checkout process that would ultimately convert browsers into buyers. I carefully configured shipping and tax to comply with various regulations, profitability and logistics while keeping the customer experience straightforward.
             </p>

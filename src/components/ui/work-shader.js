@@ -10,7 +10,6 @@ const WorkShader = ({ color = 'red' }) => {
 
     const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
     if (!gl) {
-      console.warn('WebGL not supported');
       return;
     }
 
@@ -125,7 +124,6 @@ const WorkShader = ({ color = 'red' }) => {
       gl.compileShader(shader);
       
       if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        console.error('Shader compilation error:', gl.getShaderInfoLog(shader));
         gl.deleteShader(shader);
         return null;
       }
@@ -144,7 +142,6 @@ const WorkShader = ({ color = 'red' }) => {
     gl.linkProgram(program);
 
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-      console.error('Program linking error:', gl.getProgramInfoLog(program));
       return;
     }
 

@@ -58,7 +58,6 @@ const VerticalCutReveal = forwardRef(({
   // Split text based on splitBy parameter
   const elements = useMemo(() => {
     if (!text || text.trim() === "") {
-      console.warn('VerticalCutReveal: Empty text provided')
       return []
     }
 
@@ -68,7 +67,6 @@ const VerticalCutReveal = forwardRef(({
         characters: splitIntoCharacters(word),
         needsSpace: i !== words.length - 1,
       }))
-      console.log('VerticalCutReveal characters split result:', result)
       return result
     }
 
@@ -77,7 +75,6 @@ const VerticalCutReveal = forwardRef(({
       : splitBy === "lines"
         ? text.split("\n")
         : text.split(splitBy)
-    console.log('VerticalCutReveal split result:', result, 'for splitBy:', splitBy)
     return result
   }, [text, splitBy])
 

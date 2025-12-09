@@ -11,7 +11,6 @@ const MiniWorkShader = ({ isActive, color = 'purple' }) => {
 
       const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
       if (!gl) {
-        console.warn('WebGL not supported');
         return;
       }
 
@@ -162,7 +161,7 @@ const MiniWorkShader = ({ isActive, color = 'purple' }) => {
         }
       };
     } catch (error) {
-      console.error('Error setting up MiniWorkShader:', error);
+      // Error setting up MiniWorkShader
     }
   }, [isActive, color]);
 

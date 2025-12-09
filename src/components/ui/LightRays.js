@@ -279,7 +279,6 @@ void main() {
           renderer.render({ scene: mesh });
           animationIdRef.current = requestAnimationFrame(loop);
         } catch (error) {
-          console.warn('WebGL rendering error:', error);
           return;
         }
       };
@@ -309,11 +308,10 @@ void main() {
                 canvas.remove();
               } catch (error) {
                 // Element may have already been removed by React
-                console.warn('Could not remove canvas:', error);
               }
             }
           } catch (error) {
-            console.warn('Error during WebGL cleanup:', error);
+            // Error during WebGL cleanup
           }
         }
 

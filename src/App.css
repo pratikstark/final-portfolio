@@ -612,6 +612,28 @@ body.page-dark-mode .marquee-contact-section .category-svg img {
   transition: filter 0.8s ease !important;
 }
 
+/* Dark mode arrow styling for contact section */
+body.page-dark-mode .arrow-close-widget svg {
+  filter: brightness(0) invert(1) !important;
+  transition: filter 0.8s ease !important;
+}
+
+body.page-dark-mode .arrow-close-widget .arrow-svg-stroke path {
+  stroke: #ffffff !important;
+}
+
+body.page-dark-mode .arrow-close-widget .arrow-svg-fill-path {
+  fill: #ffffff !important;
+}
+
+body.page-dark-mode .arrow-close-widget .arrow-close-close-path {
+  stroke: #ffffff !important;
+}
+
+body.page-dark-mode .arrow-close-widget .arrow-close-close-fill-path {
+  fill: #ffffff !important;
+}
+
 body.page-dark-mode .custom-cursor,
 body.page-dark-mode .cursor-trail {
   z-index: 10000 !important;
@@ -622,11 +644,14 @@ body.page-dark-mode .cursor-trail {
 body.page-dark-mode .cursor-trail {
   border-color: #ffffff !important;
   background-color: transparent !important;
+  mix-blend-mode: normal !important;
+  filter: none !important;
 }
 
 body.page-dark-mode .custom-cursor {
   background-color: #ffffff !important;
   mix-blend-mode: normal !important;
+  filter: none !important;
 }
 
 body.page-dark-mode .cursor-label {
@@ -1431,18 +1456,12 @@ body.debug-mode::after {
 }
 
 .detail-content {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  /* Image takes only needed space, text fills the rest */
-  gap: clamp(16px, 2vw, 32px);
+  display: flex;
+  flex-direction: column;
+  width: 100%;
   margin-top: clamp(32px, 4vw, 64px);
-  align-items: stretch;
-  /* Make both columns same height */
   box-sizing: border-box;
   padding: 0;
-  /* Remove padding to eliminate space */
-  height: 100%;
-  width: 100%;
 }
 
 .detail-left {
@@ -1512,12 +1531,8 @@ body.debug-mode::after {
   gap: clamp(12px, 2vw, 24px);
   width: 100%;
   min-width: 0;
-  /* Allow text to shrink if needed */
-  height: 100%;
-  /* Match height of image column */
   box-sizing: border-box;
   justify-content: flex-start;
-  /* Align content to top */
 }
 
 .detail-title {
@@ -1588,23 +1603,11 @@ body.debug-mode::after {
   }
 
   .detail-content {
-    grid-template-columns: 1fr;
-    gap: clamp(16px, 3vw, 32px);
-  }
-
-  .detail-left {
-    width: clamp(220px, 45vw, 300px);
-    /* Slightly bigger on mobile too */
-    height: auto;
-    /* Let height be determined by width and aspect-ratio on mobile */
-    aspect-ratio: 1/1;
-    /* Maintain square on mobile */
-    margin: 0 auto;
+    width: 100%;
   }
 
   .detail-right {
-    height: auto;
-    /* Let height be determined by content on mobile */
+    width: 100%;
   }
 }
 
@@ -1794,7 +1797,7 @@ body.debug-mode::after {
   color: var(--color-text-primary);
   line-height: var(--line-height-normal);
   position: relative;
-  padding-left: clamp(16px, 2.5vw, 20px);
+  padding-left: 0;
   box-sizing: border-box;
   max-width: 100%;
   overflow-wrap: break-word;
@@ -1802,13 +1805,7 @@ body.debug-mode::after {
   hyphens: auto;
 }
 
-.work-summary-list li::before {
-  content: '—';
-  position: absolute;
-  left: 0;
-  color: var(--color-text-primary);
-  font-weight: var(--font-weight-medium);
-}
+/* Removed dash/bullet from list items */
 
 .projects-container {
   width: 100%;
@@ -1928,8 +1925,13 @@ body.debug-mode::after {
 .project-card.hovered {
   z-index: 15;
   transform: translateY(0) scale(1.02);
-  opacity: 1;
+  opacity: 1 !important;
   pointer-events: auto;
+}
+
+/* Ensure hovered cards always have 100% opacity, even if not centered */
+.projects-wrapper:has(.project-card.centered) .project-card.hovered {
+  opacity: 1 !important;
 }
 
 /* Hide non-hovered projects when a project is hovered in dark mode (but not during horizontal scrolling) - only centered projects can be hovered */
@@ -1962,7 +1964,7 @@ body.debug-mode::after {
 }
 
 /* Show non-centered projects at 30% opacity when one is centered (not during scrolling) - not hoverable */
-.projects-wrapper:has(.project-card.centered) .project-card:not(.centered):not(.scrolling) {
+.projects-wrapper:has(.project-card.centered) .project-card:not(.centered):not(.scrolling):not(.hovered) {
   opacity: 0.3 !important;
   pointer-events: none !important;
   /* Not hoverable when at 30% opacity */
@@ -2431,8 +2433,13 @@ body.debug-mode::after {
 .mini-project-card.hovered {
   z-index: 15;
   transform: translateY(0) scale(1.02);
-  opacity: 1;
+  opacity: 1 !important;
   pointer-events: auto;
+}
+
+/* Ensure hovered mini project cards always have 100% opacity, even if not centered */
+.mini-projects-wrapper:has(.mini-project-card.centered) .mini-project-card.hovered {
+  opacity: 1 !important;
 }
 
 /* During horizontal scrolling, allow JavaScript to control opacity for active project only */
@@ -2453,7 +2460,7 @@ body.debug-mode::after {
 }
 
 /* Show non-centered mini projects at 30% opacity when one is centered (not during scrolling) - not hoverable */
-.mini-projects-wrapper:has(.mini-project-card.centered) .mini-project-card:not(.centered):not(.scrolling) {
+.mini-projects-wrapper:has(.mini-project-card.centered) .mini-project-card:not(.centered):not(.scrolling):not(.hovered) {
   opacity: 0.3 !important;
   pointer-events: none !important;
   /* Not hoverable when at 30% opacity */

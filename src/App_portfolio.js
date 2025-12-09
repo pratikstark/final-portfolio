@@ -5,6 +5,7 @@ import { gsap } from 'gsap';
 import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ScrollSmoother } from 'gsap/ScrollSmoother';
+import mixpanel from 'mixpanel-browser';
 import './App.css';
 import AnimationLibraryProject from './pages/AnimationLibraryProject';
 import CognixaProject from './pages/CognixaProject';
@@ -22,9 +23,6 @@ import closeSvg from './assets/close.svg';
 let globalDebugMode = false;
 
 // Store original console methods
-const originalConsoleLog = console.log.bind(console);
-const originalConsoleError = console.error.bind(console);
-const originalConsoleWarn = console.warn.bind(console);
 
 // Debug logger - only logs when debug mode is enabled
 const debugLog = (...args) => {
@@ -398,12 +396,129 @@ function PortfolioApp() {
   const [showMobileAppOverlay, setShowMobileAppOverlay] = useState(false);
   const [showAIChatOverlay, setShowAIChatOverlay] = useState(false);
   const [showPravahOverlay, setShowPravahOverlay] = useState(false);
+
+  // Track session start time and scroll depth
+  const sessionStartTime = useRef(Date.now());
+  const maxScrollDepth = useRef(0);
+  const projectsViewed = useRef(new Set());
+  const timeOnPageBeforeView = useRef(Date.now());
+  const projectHoverTimers = useRef({});
+  const projectsHovered = useRef(new Set());
+
+  // Helper function to calculate scroll depth percentage
+  const getScrollDepth = () => {
+    const windowHeight = window.innerHeight;
+    const documentHeight = document.documentElement.scrollHeight;
+    const scrollTop = window.scrollY;
+    const scrollableHeight = documentHeight - windowHeight;
+    if (scrollableHeight <= 0) return 0;
+    return Math.min(100, Math.round((scrollTop / scrollableHeight) * 100));
+  };
+
+  // Track scroll depth
+  useEffect(() => {
+    let scrollTimeout;
+    const handleScroll = () => {
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        const currentDepth = getScrollDepth();
+        if (currentDepth > maxScrollDepth.current) {
+          maxScrollDepth.current = currentDepth;
+          
+          // Track milestone scroll depths (25%, 50%, 75%, 100%)
+          if ([25, 50, 75, 100].includes(currentDepth)) {
+            if (mixpanel && typeof mixpanel.track === 'function') {
+              try {
+                mixpanel.track('Scroll Depth', {
+                  scroll_depth_percent: currentDepth,
+                  max_scroll_depth: maxScrollDepth.current,
+                  time_on_page: Math.round((Date.now() - sessionStartTime.current) / 1000),
+                });
+              } catch (e) {
+                // Silently fail
+              }
+            }
+          }
+        }
+      }, 200);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      clearTimeout(scrollTimeout);
+    };
+  }, []);
+
+  // Track project hovers for analytics (2+ seconds indicates interest)
+  useEffect(() => {
+    if (hoveredProject) {
+      // Clear any existing timer for this project
+      if (projectHoverTimers.current[hoveredProject]) {
+        clearTimeout(projectHoverTimers.current[hoveredProject]);
+      }
+      
+      // Set timer to track hover after 2 seconds (indicates interest)
+      projectHoverTimers.current[hoveredProject] = setTimeout(() => {
+        if (!projectsHovered.current.has(hoveredProject)) {
+          projectsHovered.current.add(hoveredProject);
+          
+          if (mixpanel && typeof mixpanel.track === 'function') {
+            try {
+              mixpanel.track('Project Hover', {
+                project_name: hoveredProject,
+                project_type: 'main',
+                hover_duration: 2,
+                time_on_page: Math.round((Date.now() - sessionStartTime.current) / 1000),
+                scroll_depth: getScrollDepth(),
+                total_projects_hovered: projectsHovered.current.size,
+              });
+            } catch (e) {
+              // Silently fail
+            }
+          }
+        }
+      }, 2000);
+    } else {
+      // Clear all timers when no project is hovered
+      Object.values(projectHoverTimers.current).forEach(timer => clearTimeout(timer));
+      projectHoverTimers.current = {};
+    }
+    
+    return () => {
+      // Cleanup timers on unmount
+      Object.values(projectHoverTimers.current).forEach(timer => clearTimeout(timer));
+    };
+  }, [hoveredProject]);
+
+  // Helper functions to track project views
+  const trackProjectView = (projectName, projectType) => {
+    if (mixpanel && typeof mixpanel.track === 'function') {
+      try {
+        const timeBeforeView = Math.round((Date.now() - timeOnPageBeforeView.current) / 1000);
+        const scrollDepth = getScrollDepth();
+        
+        projectsViewed.current.add(projectName);
+        
+        mixpanel.track('Page View', {
+          page_url: window.location.href,
+          page_title: `${projectName} - Project`,
+          project_name: projectName,
+          project_type: projectType,
+          time_on_page_before_view: timeBeforeView,
+          scroll_depth_at_view: scrollDepth,
+          total_projects_viewed: projectsViewed.current.size,
+          max_scroll_depth: maxScrollDepth.current,
+          session_duration: Math.round((Date.now() - sessionStartTime.current) / 1000),
+        });
+      } catch (e) {
+        // Silently fail if Mixpanel tracking fails
+      }
+    }
+  };
   const [thirdProjectHoveredFor1s, setThirdProjectHoveredFor1s] = useState(false);
   const thirdProjectHoverTimerRef = useRef(null);
   const thirdProjectHoveredFor1sRef = useRef(false);
-  const [lastMiniProjectHoveredFor1s, setLastMiniProjectHoveredFor1s] = useState(false);
-  const lastMiniProjectHoverTimerRef = useRef(null);
-  const lastMiniProjectHoveredFor1sRef = useRef(false);
   const lastScrollProgressRef = useRef(0);
   const isScrollingDownRef = useRef(false);
   const lastMiniScrollProgressRef = useRef(0);
@@ -423,6 +538,7 @@ function PortfolioApp() {
   const aboutTitleRef = useRef(null);
   const aboutDetailRef = useRef(null);
   const activeSectionRef = useRef(null);
+  const lastSignificantScrollYRef = useRef(0);
   const [isMuted, setIsMuted] = useState(true);
   const [showAudioPrompt, setShowAudioPrompt] = useState(true);
 
@@ -431,7 +547,20 @@ function PortfolioApp() {
       setIsMuted(false);
       if (videoRef.current) {
         videoRef.current.muted = false;
-        videoRef.current.play().catch(e => console.log('Play error:', e));
+        videoRef.current.play().catch(() => {});
+      }
+      
+      // Track video unmute
+      if (mixpanel && typeof mixpanel.track === 'function') {
+        try {
+          mixpanel.track('Video Interaction', {
+            action: 'unmute',
+            time_on_page: Math.round((Date.now() - sessionStartTime.current) / 1000),
+            scroll_depth: getScrollDepth(),
+          });
+        } catch (e) {
+          // Silently fail
+        }
       }
     }
     setShowAudioPrompt(false);
@@ -460,8 +589,15 @@ function PortfolioApp() {
   const anyOverlayOpen = showPrismOverlay || showCognixaOverlay || showSettlinOverlay || 
                          showDataVizOverlay || showMobileAppOverlay || showAIChatOverlay || showPravahOverlay;
   
-  // Apply dark mode to entire page when last mini project is hovered for 1s OR when at bottom of page (but not when scrolling up)
+  // Apply dark mode to entire page when at bottom of page (but not when scrolling up)
   useEffect(() => {
+    // Initialize scroll position tracking
+    if (lastSignificantScrollYRef.current === 0) {
+      lastSignificantScrollYRef.current = window.scrollY || 0;
+    }
+    
+    const scrollThreshold = 10; // Only consider scroll significant if > 10px
+    
     const checkDarkMode = () => {
       // Check if at bottom of page (contact section)
       const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
@@ -469,16 +605,24 @@ function PortfolioApp() {
       const documentHeight = document.documentElement.scrollHeight;
       const atBottom = scrollTop + windowHeight >= documentHeight - 50; // 50px threshold
       
-      // If scrolling up, always remove dark mode (user wants light mode when scrolling up)
-      if (isScrollingUpwardRef.current) {
+      // Calculate significant scroll change (ignore tiny movements)
+      const scrollDelta = Math.abs(scrollTop - lastSignificantScrollYRef.current);
+      const isSignificantUpwardScroll = isScrollingUpwardRef.current && scrollDelta > scrollThreshold;
+      
+      // If scrolling up significantly, remove dark mode
+      if (isSignificantUpwardScroll) {
         document.body.classList.remove('page-dark-mode');
+        lastSignificantScrollYRef.current = scrollTop;
         return;
       }
       
-      // Dark mode should be active if:
-      // 1. Last mini project hovered for 1s, OR
-      // 2. At bottom of page
-      const shouldBeDark = lastMiniProjectHoveredFor1s || atBottom;
+      // Update last significant scroll position if movement was significant
+      if (scrollDelta > scrollThreshold) {
+        lastSignificantScrollYRef.current = scrollTop;
+      }
+      
+      // Dark mode should be active if at bottom of page
+      const shouldBeDark = atBottom;
       
       if (shouldBeDark) {
         document.body.classList.add('page-dark-mode');
@@ -497,20 +641,25 @@ function PortfolioApp() {
     window.addEventListener('scroll', handleScroll, { passive: true });
     
     return () => {
-      // Only remove if not at bottom and not last mini project hovered
+      // Only remove if not at bottom
       const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
       const windowHeight = window.innerHeight;
       const documentHeight = document.documentElement.scrollHeight;
       const atBottom = scrollTop + windowHeight >= documentHeight - 50;
-      if (!atBottom && !lastMiniProjectHoveredFor1s) {
+      if (!atBottom) {
         document.body.classList.remove('page-dark-mode');
       }
       window.removeEventListener('scroll', handleScroll);
     };
-  }, [lastMiniProjectHoveredFor1s]);
+  }, []);
   
   useEffect(() => {
     if (anyOverlayOpen) {
+      // Clear hover states when overlay opens
+      setHoveredProject(null);
+      setHoveredMiniProject(null);
+      setShowMiniAurora(false);
+      
       // Lock body scroll
       const originalOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
@@ -888,19 +1037,9 @@ function PortfolioApp() {
       directional: true, // Only assist in intended direction
       inertia: true, // Inertia ends at snap points
       snapSpacing: 0.15, // Consistent spacing for all snap points
-      onSnap: (self) => {
-        console.log('🔵 SNAP TRIGGERED:', {
-          trigger: self.trigger?.className || 'unknown',
-          snapTo: self.vars?.snap?.snapTo,
-          scrollY: window.scrollY,
-          progress: self.progress,
-          direction: self.direction
-        });
-      }
+      onSnap: () => {}
     };
 
-    // Debug scroll listeners group
-    console.group('📊 MAGNETIC SNAP DEBUG - Scroll Listeners');
 
     let debugLastScrollY = window.scrollY;
     let scrollTimeout = null;
@@ -923,14 +1062,6 @@ function PortfolioApp() {
           const bottomFromTop = rect.bottom;
           const topFromTop = rect.top;
 
-          console.log('📍 SCROLLING:', {
-            scrollY: currentScrollY.toFixed(2),
-            delta: scrollDelta.toFixed(2),
-            direction,
-            mainProjectsTop: topFromTop.toFixed(2),
-            mainProjectsBottom: bottomFromTop.toFixed(2),
-            viewportHeight: window.innerHeight
-          });
         }
 
         debugLastScrollY = currentScrollY;
@@ -942,14 +1073,6 @@ function PortfolioApp() {
             const mainProjectsEl = document.querySelector('.main-projects');
             if (mainProjectsEl) {
               const rect = mainProjectsEl.getBoundingClientRect();
-              console.log('🛑 SCROLL STOPPED:', {
-                finalScrollY: window.scrollY.toFixed(2),
-                mainProjectsTop: rect.top.toFixed(2),
-                mainProjectsBottom: rect.bottom.toFixed(2),
-                mainProjectsTopPercent: ((rect.top / window.innerHeight) * 100).toFixed(2) + '%',
-                mainProjectsBottomPercent: ((rect.bottom / window.innerHeight) * 100).toFixed(2) + '%',
-                expectedBottomTop: 'Should be 0 when third project centered'
-              });
             }
           }
         }, 150);
@@ -964,66 +1087,11 @@ function PortfolioApp() {
       const mainProjectsEl = document.querySelector('.main-projects');
       if (mainProjectsEl) {
         const rect = mainProjectsEl.getBoundingClientRect();
-        console.log('🎯 MAIN PROJECTS POSITION:', {
-          top: rect.top.toFixed(2),
-          bottom: rect.bottom.toFixed(2),
-          height: rect.height.toFixed(2),
-          topPercent: ((rect.top / window.innerHeight) * 100).toFixed(2) + '%',
-          bottomPercent: ((rect.bottom / window.innerHeight) * 100).toFixed(2) + '%',
-          scrollY: window.scrollY.toFixed(2)
-        });
       }
     };
 
-    // Log initial position
-    console.log('🚀 INITIAL POSITION:', {
-      scrollY: window.scrollY,
-      viewportHeight: window.innerHeight
-    });
     trackSnapEvents();
 
-    // Helper function to manually check position (call from console: window.checkSnapPosition())
-    window.checkSnapPosition = () => {
-      console.group('🔍 MANUAL POSITION CHECK');
-      const mainProjectsEl = document.querySelector('.main-projects');
-      const miniProjectsEl = document.querySelector('.mini-projects');
-
-      if (mainProjectsEl) {
-        const rect = mainProjectsEl.getBoundingClientRect();
-        console.log('📌 MAIN PROJECTS:', {
-          top: rect.top.toFixed(2),
-          bottom: rect.bottom.toFixed(2),
-          height: rect.height.toFixed(2),
-          topPercent: ((rect.top / window.innerHeight) * 100).toFixed(2) + '%',
-          bottomPercent: ((rect.bottom / window.innerHeight) * 100).toFixed(2) + '%',
-          scrollY: window.scrollY.toFixed(2),
-          expectedBottomForThirdProject: '0px (when third project centered)',
-          actualDifference: rect.bottom.toFixed(2) + 'px from expected'
-        });
-      }
-
-      if (miniProjectsEl) {
-        const rect = miniProjectsEl.getBoundingClientRect();
-        console.log('📌 MINI PROJECTS:', {
-          top: rect.top.toFixed(2),
-          bottom: rect.bottom.toFixed(2),
-          topPercent: ((rect.top / window.innerHeight) * 100).toFixed(2) + '%',
-          scrollY: window.scrollY.toFixed(2)
-        });
-      }
-
-      console.log('📌 VIEWPORT:', {
-        height: window.innerHeight,
-        scrollY: window.scrollY.toFixed(2),
-        scrollMax: document.documentElement.scrollHeight - window.innerHeight
-      });
-
-      console.groupEnd();
-    };
-
-    console.log('💡 TIP: Call window.checkSnapPosition() in console to check current position');
-
-    console.groupEnd();
 
     // Removed vertical entry/exit snap triggers - only snap to centered projects within sections
 
@@ -1765,9 +1833,9 @@ function PortfolioApp() {
           anticipatePin: 1,
           snap: {
             snapTo: (progress) => {
-              // If scrolling down past last mini project (progress > 0.95) and not hovered for 1s, disable snap
+              // If scrolling down past last mini project (progress > 0.95), disable snap
               // This allows snapping to the last mini project (progress 1.0) but disables snap when trying to scroll past
-              if (isMiniScrollingDownRef.current && progress > 0.95 && !lastMiniProjectHoveredFor1sRef.current) {
+              if (isMiniScrollingDownRef.current && progress > 0.95) {
                 return null; // Disable snap when scrolling down past last mini project
               }
 
@@ -2162,21 +2230,176 @@ function PortfolioApp() {
           debugLog('Contact option hovered:', option.dataset.section);
         });
 
+        // Use capture phase to run before other handlers
         option.addEventListener('click', (e) => {
           e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation(); // Prevent other handlers from running
+          
+          // Save scroll position immediately to prevent any scroll changes
+          const savedScrollY = window.scrollY;
+          const savedScrollX = window.scrollX;
+          
           const contactType = option.dataset.section;
           debugLog('Contact option clicked:', contactType);
+          
+          // Explicitly prevent about section behaviors
+          // Ensure activeSection doesn't change for contact options
+          // This prevents scroll-to-top and arrow morphing
+          
+          // Prevent any scroll changes during the click handling
+          const preventScroll = () => {
+            if (window.scrollY !== savedScrollY || window.scrollX !== savedScrollX) {
+              window.scrollTo(savedScrollX, savedScrollY);
+            }
+          };
+          
+          // Monitor and prevent scroll changes
+          const scrollCheckInterval = setInterval(preventScroll, 10);
+          setTimeout(() => clearInterval(scrollCheckInterval), 500);
 
-          // Handle different contact types
-          if (contactType === 'email') {
-            window.location.href = 'mailto:your@email.com';
-          } else if (contactType === 'schedule') {
-            window.open('https://calendar.app.google/EzFhyN3hioUtucrZ9', '_blank');
-          } else if (contactType === 'message') {
-            // Open contact form or messaging interface
-            debugLog('Open message form');
+          // Helper function to calculate scroll depth (local to avoid scope issues)
+          const calculateScrollDepth = () => {
+            try {
+              const windowHeight = window.innerHeight;
+              const documentHeight = document.documentElement.scrollHeight;
+              const scrollTop = window.scrollY;
+              const scrollableHeight = documentHeight - windowHeight;
+              if (scrollableHeight <= 0) return 0;
+              return Math.min(100, Math.round((scrollTop / scrollableHeight) * 100));
+            } catch (err) {
+              return 0;
+            }
+          };
+
+          // Track contact click with Mixpanel - send immediately before navigation
+          if (window.mixpanel && typeof window.mixpanel.track === 'function') {
+            try {
+              const timeBeforeConversion = sessionStartTime.current ? 
+                Math.round((Date.now() - sessionStartTime.current) / 1000) : 0;
+              const scrollDepth = calculateScrollDepth();
+              
+              window.mixpanel.track('Conversion', {
+                'Conversion Type': `Contact - ${contactType}`,
+                contact_method: contactType,
+                page_url: window.location.href,
+                time_on_page_before_conversion: timeBeforeConversion,
+                scroll_depth_at_conversion: scrollDepth,
+                max_scroll_depth: maxScrollDepth.current || 0,
+                total_projects_viewed: projectsViewed.current ? projectsViewed.current.size : 0,
+                projects_viewed_list: projectsViewed.current ? Array.from(projectsViewed.current) : [],
+                session_duration: timeBeforeConversion,
+              });
+            } catch (err) {
+              // Mixpanel tracking error
+            }
           }
-        });
+
+          // Small delay to ensure Mixpanel request is sent before opening link
+          // This prevents cancelled requests when link opens
+          setTimeout(() => {
+            try {
+              // Handle different contact types after tracking
+              if (contactType === 'email') {
+                // Store scroll position before creating link
+                const currentScrollY = window.scrollY;
+                const currentScrollX = window.scrollX;
+                
+                // Create a scroll lock function
+                const lockScroll = () => {
+                  window.scrollTo(currentScrollX, currentScrollY);
+                };
+                
+                // Lock scroll position during mailto action
+                const scrollLockInterval = setInterval(lockScroll, 5);
+                
+                const mailtoLink = document.createElement('a');
+                mailtoLink.href = 'mailto:connect@pratiksinghal.in';
+                mailtoLink.style.display = 'none';
+                mailtoLink.style.position = 'absolute';
+                mailtoLink.style.left = '-9999px';
+                mailtoLink.style.top = '-9999px';
+                mailtoLink.setAttribute('tabindex', '-1');
+                
+                document.body.appendChild(mailtoLink);
+                
+                // Ensure scroll position is locked before clicking
+                window.scrollTo(currentScrollX, currentScrollY);
+                
+                // Use a small delay to ensure scroll is locked
+                requestAnimationFrame(() => {
+                  window.scrollTo(currentScrollX, currentScrollY);
+                  mailtoLink.click();
+                  
+                  // Keep scroll locked for a bit after click
+                  requestAnimationFrame(() => {
+                    window.scrollTo(currentScrollX, currentScrollY);
+                  });
+                });
+                
+                // Clean up and ensure scroll stays locked
+                setTimeout(() => {
+                  try {
+                    clearInterval(scrollLockInterval);
+                    document.body.removeChild(mailtoLink);
+                    // Final scroll position restore
+                    window.scrollTo(currentScrollX, currentScrollY);
+                  } catch (cleanupErr) {
+                    // Ignore cleanup errors
+                  }
+                }, 200);
+              } else if (contactType === 'schedule') {
+                // Open calendar link in new tab - stays on homepage
+                window.open('https://calendar.app.google/EzFhyN3hioUtucrZ9', '_blank', 'noopener,noreferrer');
+              } else if (contactType === 'message') {
+                // Open WhatsApp link in new tab
+                window.open('https://wa.me/message/PGKCRHXIUMD5B1', '_blank', 'noopener,noreferrer');
+              }
+            } catch (err) {
+              // Error opening contact link
+              // Fallback: try alternative methods if primary fails
+              if (contactType === 'email') {
+                // Fallback: try direct mailto
+                try {
+                  const currentScrollY = window.scrollY;
+                  const mailtoLink = document.createElement('a');
+                  mailtoLink.href = 'mailto:your@email.com';
+                  mailtoLink.style.display = 'none';
+                  mailtoLink.style.position = 'absolute';
+                  mailtoLink.style.left = '-9999px';
+                  document.body.appendChild(mailtoLink);
+                  mailtoLink.click();
+                  // Restore scroll position
+                  requestAnimationFrame(() => {
+                    window.scrollTo(0, currentScrollY);
+                  });
+                  setTimeout(() => {
+                    try {
+                      document.body.removeChild(mailtoLink);
+                      window.scrollTo(0, currentScrollY);
+                    } catch (e) {
+                      // Ignore cleanup errors
+                    }
+                  }, 100);
+                } catch (fallbackErr) {
+                  // Fallback mailto failed
+                }
+              } else if (contactType === 'schedule') {
+                try {
+                  window.open('https://calendar.app.google/EzFhyN3hioUtucrZ9', '_blank', 'noopener,noreferrer');
+                } catch (e) {
+                  // Failed to open schedule link
+                }
+              } else if (contactType === 'message') {
+                try {
+                  window.open('https://wa.me/message/PGKCRHXIUMD5B1', '_blank', 'noopener,noreferrer');
+                } catch (e) {
+                  // Failed to open WhatsApp link
+                }
+              }
+            }
+          }, 150); // 150ms delay to allow Mixpanel request to be sent
+        }, true); // Use capture phase to run before other handlers
       });
     };
 
@@ -2776,6 +2999,9 @@ function PortfolioApp() {
     };
   }, []);
 
+  // Track section visits
+  const sectionsVisited = useRef(new Set());
+  
   // Update ref whenever state changes
   useEffect(() => {
     activeSectionRef.current = activeSection;
@@ -2784,6 +3010,24 @@ function PortfolioApp() {
     const hovered = typeof window !== 'undefined' ? window.__hoveredAboutSection : null;
     if (labelEl && hovered) {
       labelEl.textContent = activeSection === hovered ? 'Click to close' : 'Click to open';
+    }
+    
+    // Track section visits
+    if (activeSection && !sectionsVisited.current.has(activeSection)) {
+      sectionsVisited.current.add(activeSection);
+      
+      if (mixpanel && typeof mixpanel.track === 'function') {
+        try {
+          mixpanel.track('Section Visit', {
+            section_name: activeSection,
+            time_on_page: Math.round((Date.now() - sessionStartTime.current) / 1000),
+            scroll_depth: getScrollDepth(),
+            total_sections_visited: sectionsVisited.current.size,
+          });
+        } catch (e) {
+          // Silently fail
+        }
+      }
     }
   }, [activeSection]);
 
@@ -2806,7 +3050,8 @@ function PortfolioApp() {
 
   // Set up click handlers ONCE - no dependencies
   useEffect(() => {
-    const rows = document.querySelectorAll('.about-title-line');
+    // Only select about section rows, exclude contact section rows (email, schedule, message)
+    const rows = document.querySelectorAll('.about-title-line:not([data-section="email"]):not([data-section="schedule"]):not([data-section="message"])');
     const detailArea = document.querySelector('.about-detail');
 
     const clickHandlers = new Map();
@@ -3055,53 +3300,53 @@ function PortfolioApp() {
         body: `<p>My development journey began in <strong>2019</strong> with <u data-project="">UBU Community</u>, my first paid web project, which was a static site built with <strong>HTML, CSS, and native code</strong>. That project strengthened my basics in layouts, states, interactions, and animations.</p><p>At <u data-project="settlin">Settlin</u>, I reached a milestone that meant a lot to me: shipping production Flutter screens even though my role was primarily design-focused. This helped close the gap between design and engineering and delivered real business value when resources were tight.</p><p>I've also contributed <strong>React</strong> code at Settlin and built <u data-project="cognixa">Cognixa</u> entirely on a React architecture. While I don't consider myself a highly advanced engineer, I naturally think in systems. That helps reduce friction between design and development and speeds up how projects move.</p><p><u data-project="animation-library">Prism</u> is where my technical and design skills meet. It uses perceptual color science, has integrated analytics and behavior tracking, and exports palettes in formats that are actually useful in daily design work.</p><p>My engineering approach focuses on problem-solving instead of complexity. I care about clarity, user impact, and business outcomes, which helps me contribute meaningfully even outside traditional design boundaries.</p>`
       }
     };
-    return data[section];
+    return data[section] || null;
   };
 
   const getProjectData = (projectId) => {
     const projects = {
       cognixa: {
         learnings: [
-          'Solo product development from concept to launch',
-          'Integrating psychological principles into UX design',
-          'Building data-driven decision-making frameworks',
-          'Balancing technical debt with feature development'
+          ' • That UX is the foundation of any product, not an afterthought',
+          ' • How to translate user needs into product features',
+          ' • How to ship fast without compromising ethics or privacy',
+          ' • That AI should reduce friction, not control the workflow'
         ],
         outcomes: [
-          'Launched MVP with 500+ active users in first quarter',
-          'Reduced user onboarding time by 60%',
-          'Achieved 85% user retention rate',
-          'Built scalable architecture supporting 10K+ users'
+          ' • Solo product development from concept to launch',
+          ' • Led UX-first development, building around user questions',
+          ' • Created privacy-first workflows and clear value propositions',
+          ' • Managed end-to-end product work: design, frontend, marketing'
         ],
         color: '#F4D7C4' // Red
       },
       settlin: {
         learnings: [
-          'Cross-functional collaboration in product teams',
-          'Designing for complex B2B workflows',
-          'Systems thinking in large-scale platforms',
-          'Iterative design based on stakeholder feedback'
+          ' • Reducing cognitive load boosts conversions instantly',
+          ' • Design systems save more time than any single feature',
+          ' • Behavioral data beats design intuition',
+          ' • Knowing the tech stack makes product planning real'
         ],
         outcomes: [
-          'Streamlined 3-day process into 2-hour workflow',
-          'Increased team productivity by 40%',
-          'Reduced support tickets by 55%',
-          'Successfully onboarded 50+ enterprise clients'
+          ' • Redesigned the Preferences Flow using cognitive load theory',
+          ' • Built a full atomic design system (247 components)',
+          ' • Set up Mixpanel and shifted decisions to data',
+          ' • Contributed in Flutter + React to unblock engineering'
         ],
         color: '#C73C3B' // Green
       },
       project3: {
         learnings: [
-          'Rapid prototyping and validation techniques',
-          'Mobile-first design considerations',
-          'Performance optimization for web applications',
-          'User testing and feedback incorporation'
+          ' • Simplicity requires complex backend logic hidden from users',
+          ' • Food waste is a systems issue, not a shopping issue',
+          ' • Consistent visual states build trust fast',
+          ' • Strong products are loops, not feature lists'
         ],
         outcomes: [
-          'Delivered product 3 weeks ahead of schedule',
-          'Achieved 95% positive user feedback score',
-          'Improved page load speed by 70%',
-          'Created reusable component library'
+          ' • Researched food-waste habits and built a planning system',
+          ' • Designed meal plans based on pantry state, expiry, and goals',
+          ' • Built a consistent color-state interface',
+          ' • Created a closed feedback loop across meals, inventory, and logs'
         ],
         color: '#C6D4E6' // Blue
       }
@@ -3182,6 +3427,11 @@ function PortfolioApp() {
 
   // Handle project hover with viewport check
   const handleProjectHover = (projectId) => {
+    // Don't allow hover when any overlay is open
+    if (anyOverlayOpen) {
+      return;
+    }
+    
     // Check if third project is centered (at snap point)
     const thirdProjectCard = document.querySelector('.project-card.blue-project');
     const isThirdProjectCentered = thirdProjectCard && thirdProjectCard.classList.contains('centered');
@@ -3334,34 +3584,17 @@ function PortfolioApp() {
 
   // Handle mini project hover with viewport check
   const handleMiniProjectHover = (projectId) => {
+    // Don't allow hover when any overlay is open
+    if (anyOverlayOpen) {
+      return;
+    }
+    
     // Check if last mini project is centered (at snap point)
     const lastMiniProjectCard = document.querySelector('.mini-project-card:last-child');
     const isLastMiniProjectCentered = lastMiniProjectCard && lastMiniProjectCard.classList.contains('centered');
 
-    // Only start 1s timer if hovering over last mini project AND it's centered (not scrolling)
-    // Check if it's the last mini project (4th project - 'ai-chat')
     const miniProjectsScrollTrigger = ScrollTrigger.getById('mini-projects-scroll');
     const isLastMiniProject = projectId === 'ai-chat';
-
-    if (isLastMiniProject && isLastMiniProjectCentered) {
-      // Clear any existing timer
-      if (lastMiniProjectHoverTimerRef.current) {
-        clearTimeout(lastMiniProjectHoverTimerRef.current);
-      }
-      // Set timer to enable snap after 1 second
-      lastMiniProjectHoverTimerRef.current = setTimeout(() => {
-        setLastMiniProjectHoveredFor1s(true);
-        lastMiniProjectHoveredFor1sRef.current = true;
-      }, 1000);
-    } else {
-      // Not last mini project or not centered, clear timer and reset state
-      if (lastMiniProjectHoverTimerRef.current) {
-        clearTimeout(lastMiniProjectHoverTimerRef.current);
-        lastMiniProjectHoverTimerRef.current = null;
-      }
-      setLastMiniProjectHoveredFor1s(false);
-      lastMiniProjectHoveredFor1sRef.current = false;
-    }
 
     // Only scroll to viewport if not scrolling down past last mini project
     // Allow autoscroll when scrolling upward (towards "mini projects") even if past last project
@@ -3615,13 +3848,6 @@ function PortfolioApp() {
       if (wasMiniInView && !isMiniNowInView && hoveredMiniProject) {
         setHoveredMiniProject(null);
         setShowMiniAurora(false);
-        // Clear last mini project hover timer
-        if (lastMiniProjectHoverTimerRef.current) {
-          clearTimeout(lastMiniProjectHoverTimerRef.current);
-          lastMiniProjectHoverTimerRef.current = null;
-        }
-        setLastMiniProjectHoveredFor1s(false);
-        lastMiniProjectHoveredFor1sRef.current = false;
         enforceMiniProjectPointerEvents();
       }
     };
@@ -3709,13 +3935,6 @@ function PortfolioApp() {
             if (hoveredMiniProject) {
               setHoveredMiniProject(null);
               setShowMiniAurora(false);
-              // Clear last mini project hover timer
-              if (lastMiniProjectHoverTimerRef.current) {
-                clearTimeout(lastMiniProjectHoverTimerRef.current);
-                lastMiniProjectHoverTimerRef.current = null;
-              }
-              setLastMiniProjectHoveredFor1s(false);
-              lastMiniProjectHoveredFor1sRef.current = false;
             }
           }
         }, 100); // Small delay to prevent flickering
@@ -3806,7 +4025,7 @@ function PortfolioApp() {
       {/* Pinned hero that transitions, then releases to normal scroll */}
       <section className="hero" style={debugMode ? { border: '2px solid red' } : {}}>
         <div className="video-container" ref={videoContainerRef} style={{ position: 'relative', ...(debugMode ? { border: '2px solid blue' } : {}) }}>
-          <video ref={videoRef} src="https://cdn.pratiksinghal.in/Final.mp4" autoPlay muted={isMuted} playsInline loop style={{ height: '100%', objectFit: 'cover', ...(debugMode ? { border: '2px solid green' } : {}) }} />
+          <video ref={videoRef} src="https://cdn.pratiksinghal.in/Final%20Preview.mp4" autoPlay muted={isMuted} playsInline loop style={{ height: '100%', objectFit: 'cover', ...(debugMode ? { border: '2px solid green' } : {}) }} />
 
           <button
             onClick={() => {
@@ -3815,7 +4034,20 @@ function PortfolioApp() {
               if (videoRef.current) {
                 videoRef.current.muted = newMutedState;
                 if (!newMutedState) {
-                  videoRef.current.play().catch(e => console.log('Play error:', e));
+                  videoRef.current.play().catch(() => {});
+                }
+              }
+              
+              // Track video mute/unmute toggle
+              if (mixpanel && typeof mixpanel.track === 'function') {
+                try {
+                  mixpanel.track('Video Interaction', {
+                    action: newMutedState ? 'mute' : 'unmute',
+                    time_on_page: Math.round((Date.now() - sessionStartTime.current) / 1000),
+                    scroll_depth: getScrollDepth(),
+                  });
+                } catch (e) {
+                  // Silently fail
                 }
               }
             }}
@@ -3900,21 +4132,16 @@ function PortfolioApp() {
           <div className="about-detail" ref={aboutDetailRef} style={debugMode ? { border: '2px solid purple' } : {}}>
             {activeSection && (
               <div className="detail-content" style={debugMode ? { border: '2px solid magenta' } : {}}>
-                <div className="detail-left" style={debugMode ? { border: '2px solid red' } : {}}>
-                  <div className="detail-icon">
-                    {getSectionData(activeSection).icon}
-                  </div>
-                </div>
                 <div className="detail-right" style={debugMode ? { border: '2px solid blue' } : {}}>
-                  <div className="detail-body" dangerouslySetInnerHTML={{ __html: getSectionData(activeSection).body }} />
+                  <div className="detail-body" dangerouslySetInnerHTML={{ __html: getSectionData(activeSection)?.body || '' }} />
                 </div>
               </div>
             )}
           </div>
 
           <div className="about-grid" style={debugMode ? { border: '2px solid teal' } : {}}>
-            <div className="about-col-left">I take full ownership of my work—from initial problem identification to final implementation. Whether I'm debugging code at 2 AM or redesigning a flow for the fifth time, I'm driven by creating products that genuinely improve how people work and think.</div>
-            <div className="about-col-right"><span className="about-strong">What I bring:</span> <span className="about-caption">Deep problem-solving, cross-functional execution, and the rare ability to think simultaneously as a user, designer, developer, and business owner.</span></div>
+            <div className="about-col-left">I take full ownership of my work. I'm driven by creating products that genuinely improve how people work and think.</div>
+            <div className="about-col-right"><span className="about-strong">What I bring:</span> <span className="about-caption">Deep problem-solving, cross-functional execution, and the ability to think simultaneously as a user, designer, developer, and stakeholder.</span></div>
           </div>
         </div>
       </section>
@@ -3943,18 +4170,18 @@ function PortfolioApp() {
         {hoveredProject && isMainProjectsInView && getProjectData(hoveredProject) && (
           <div className="work-summary visible" style={debugMode ? { border: '2px solid orange' } : {}}>
             <div className="work-summary-col" style={debugMode ? { border: '2px solid purple' } : {}}>
-              <h3 className="work-summary-title" style={debugMode ? { border: '2px solid cyan' } : {}}>Learnings</h3>
-              <ul className="work-summary-list" style={debugMode ? { border: '2px solid yellow' } : {}}>
-                {getProjectData(hoveredProject).learnings.map((learning, index) => (
-                  <li key={index} style={debugMode ? { border: '2px solid magenta' } : {}}>{learning}</li>
-                ))}
-              </ul>
-            </div>
-            <div className="work-summary-col" style={debugMode ? { border: '2px solid teal' } : {}}>
               <h3 className="work-summary-title" style={debugMode ? { border: '2px solid cyan' } : {}}>Outcomes</h3>
               <ul className="work-summary-list" style={debugMode ? { border: '2px solid yellow' } : {}}>
                 {getProjectData(hoveredProject).outcomes.map((outcome, index) => (
                   <li key={index} style={debugMode ? { border: '2px solid magenta' } : {}}>{outcome}</li>
+                ))}
+              </ul>
+            </div>
+            <div className="work-summary-col" style={debugMode ? { border: '2px solid teal' } : {}}>
+              <h3 className="work-summary-title" style={debugMode ? { border: '2px solid cyan' } : {}}>Learnings</h3>
+              <ul className="work-summary-list" style={debugMode ? { border: '2px solid yellow' } : {}}>
+                {getProjectData(hoveredProject).learnings.map((learning, index) => (
+                  <li key={index} style={debugMode ? { border: '2px solid magenta' } : {}}>{learning}</li>
                 ))}
               </ul>
             </div>
@@ -3982,7 +4209,10 @@ function PortfolioApp() {
                     thirdProjectHoveredFor1sRef.current = false;
                   }
                 }}
-                onClick={() => setShowCognixaOverlay(true)}
+                onClick={() => {
+                  trackProjectView('Cognixa', 'main');
+                  setShowCognixaOverlay(true);
+                }}
                 style={debugMode ? { border: '2px solid red' } : {}}
               >
                 <div className="project-card-link">
@@ -4031,7 +4261,10 @@ function PortfolioApp() {
                     thirdProjectHoveredFor1sRef.current = false;
                   }
                 }}
-                onClick={() => setShowSettlinOverlay(true)}
+                onClick={() => {
+                  trackProjectView('Settlin', 'main');
+                  setShowSettlinOverlay(true);
+                }}
                 style={debugMode ? { border: '2px solid green' } : {}}
               >
                 <div className="project-card-link">
@@ -4080,7 +4313,10 @@ function PortfolioApp() {
                     thirdProjectHoveredFor1sRef.current = false;
                   }
                 }}
-                onClick={() => setShowPravahOverlay(true)}
+                onClick={() => {
+                  trackProjectView('Pravah', 'main');
+                  setShowPravahOverlay(true);
+                }}
                 style={debugMode ? { border: '2px solid blue' } : {}}
               >
                 <div className="project-card-link">
@@ -4124,7 +4360,7 @@ function PortfolioApp() {
         </div>
         <div className="mini-projects-container">
           {/* Invisible viewport container - this is the black rectangle reference */}
-          <div className={`mini-projects-viewport-container ${hoveredMiniProject && isMiniProjectsInView && !lastMiniProjectHoveredFor1s ? 'dark-mode' : ''}`}>
+          <div className={`mini-projects-viewport-container ${hoveredMiniProject && isMiniProjectsInView ? 'dark-mode' : ''}`}>
             {hoveredMiniProject && isMiniProjectsInView && showMiniAurora && (
               <div className="aurora-wrapper aurora-staggered">
                 <Aurora
@@ -4142,25 +4378,18 @@ function PortfolioApp() {
             <div className="mini-projects-track">
               <div className="mini-projects-wrapper">
                 <div
-                  onClick={() => setShowPrismOverlay(true)}
+                  onClick={() => {
+                    trackProjectView('Prism', 'mini');
+                    setShowPrismOverlay(true);
+                  }}
                   className={`mini-project-card purple-project ${hoveredMiniProject === 'animation-library' ? 'hovered' : ''}`}
                   onMouseEnter={() => handleMiniProjectHover('animation-library')}
                   onMouseLeave={() => {
                     // Don't clear hover state if we're transitioning or scrolling to a different project
                     if (isTransitioningRef.current || isScrollingToDifferentMiniProjectRef.current) return;
 
-                    const wasLastMiniProject = hoveredMiniProject === 'ai-chat';
                     setHoveredMiniProject(null);
                     setShowMiniAurora(false);
-                    // Clear last mini project hover timer if leaving last mini project
-                    if (wasLastMiniProject) {
-                      if (lastMiniProjectHoverTimerRef.current) {
-                        clearTimeout(lastMiniProjectHoverTimerRef.current);
-                        lastMiniProjectHoverTimerRef.current = null;
-                      }
-                      setLastMiniProjectHoveredFor1s(false);
-                      lastMiniProjectHoveredFor1sRef.current = false;
-                    }
                   }}
                 >
                   <div className="mini-project-rectangle">
@@ -4178,25 +4407,18 @@ function PortfolioApp() {
                 </div>
 
                 <div
-                  onClick={() => setShowDataVizOverlay(true)}
+                  onClick={() => {
+                    trackProjectView('JARVIS', 'mini');
+                    setShowDataVizOverlay(true);
+                  }}
                   className={`mini-project-card orange-project ${hoveredMiniProject === 'data-viz' ? 'hovered' : ''}`}
                   onMouseEnter={() => handleMiniProjectHover('data-viz')}
                   onMouseLeave={() => {
                     // Don't clear hover state if we're transitioning or scrolling to a different project
                     if (isTransitioningRef.current || isScrollingToDifferentMiniProjectRef.current) return;
 
-                    const wasLastMiniProject = hoveredMiniProject === 'ai-chat';
                     setHoveredMiniProject(null);
                     setShowMiniAurora(false);
-                    // Clear last mini project hover timer if leaving last mini project
-                    if (wasLastMiniProject) {
-                      if (lastMiniProjectHoverTimerRef.current) {
-                        clearTimeout(lastMiniProjectHoverTimerRef.current);
-                        lastMiniProjectHoverTimerRef.current = null;
-                      }
-                      setLastMiniProjectHoveredFor1s(false);
-                      lastMiniProjectHoveredFor1sRef.current = false;
-                    }
                   }}
                 >
                   <div className="mini-project-rectangle">
@@ -4208,31 +4430,24 @@ function PortfolioApp() {
                   </div>
                   <div className="mini-project-info">
                     <h3 className="mini-project-title">Jarvis Assistant</h3>
-                    <p className="mini-project-subtitle">Self hosted deployable AI</p>
+                    <p className="mini-project-subtitle">Self deployable AI</p>
                   </div>
-                  <p className="mini-project-body">Everyone knows by now that context drives AI quality. ChatGPT's memory features and user context layers prove that more background information yields better outputs. The equation is simple: regardless of which model or parameters you're running, richer context produces more useful results.</p>
+                  <p className="mini-project-body">A fully local AI assistant built with Whisper, Ollama, Piper and n8n running inside a Docker stack. It handles voice, automation, and system actions entirely on-device for total privacy and customisation.</p>
                 </div>
 
                 <div
-                  onClick={() => setShowMobileAppOverlay(true)}
+                  onClick={() => {
+                    trackProjectView('Bloom Bakehouse', 'mini');
+                    setShowMobileAppOverlay(true);
+                  }}
                   className={`mini-project-card teal-project ${hoveredMiniProject === 'mobile-app' ? 'hovered' : ''}`}
                   onMouseEnter={() => handleMiniProjectHover('mobile-app')}
                   onMouseLeave={() => {
                     // Don't clear hover state if we're transitioning or scrolling to a different project
                     if (isTransitioningRef.current || isScrollingToDifferentMiniProjectRef.current) return;
 
-                    const wasLastMiniProject = hoveredMiniProject === 'ai-chat';
                     setHoveredMiniProject(null);
                     setShowMiniAurora(false);
-                    // Clear last mini project hover timer if leaving last mini project
-                    if (wasLastMiniProject) {
-                      if (lastMiniProjectHoverTimerRef.current) {
-                        clearTimeout(lastMiniProjectHoverTimerRef.current);
-                        lastMiniProjectHoverTimerRef.current = null;
-                      }
-                      setLastMiniProjectHoveredFor1s(false);
-                      lastMiniProjectHoveredFor1sRef.current = false;
-                    }
                   }}
                 >
                   <div className="mini-project-rectangle">
@@ -4246,29 +4461,24 @@ function PortfolioApp() {
                     <h3 className="mini-project-title">Bloom Bakehouse</h3>
                     <p className="mini-project-subtitle">Cafe Design Project</p>
                   </div>
-                  <p className="mini-project-body">Somewhere around 2018, every bakery started looking the same. A peachy palette and a serif font that was very standardised. Instagram turned bakeries into content studios that sold bread. The aesthetic worked until it was popularised. When everything signals premium through identical visual language, it loses it's essence.</p>
+                  <p className="mini-project-body">
+                    A bakery identity designed for tier-3 India balancing approachability with premium cues, and culturally grounded design choices.
+                  </p>
                 </div>
 
                 <div
-                  onClick={() => setShowAIChatOverlay(true)}
+                  onClick={() => {
+                    trackProjectView('Conscious Living', 'mini');
+                    setShowAIChatOverlay(true);
+                  }}
                   className={`mini-project-card yellow-project ${hoveredMiniProject === 'ai-chat' ? 'hovered' : ''}`}
                   onMouseEnter={() => handleMiniProjectHover('ai-chat')}
                   onMouseLeave={() => {
                     // Don't clear hover state if we're transitioning or scrolling to a different project
                     if (isTransitioningRef.current || isScrollingToDifferentMiniProjectRef.current) return;
 
-                    const wasLastMiniProject = hoveredMiniProject === 'ai-chat';
                     setHoveredMiniProject(null);
                     setShowMiniAurora(false);
-                    // Clear last mini project hover timer if leaving last mini project
-                    if (wasLastMiniProject) {
-                      if (lastMiniProjectHoverTimerRef.current) {
-                        clearTimeout(lastMiniProjectHoverTimerRef.current);
-                        lastMiniProjectHoverTimerRef.current = null;
-                      }
-                      setLastMiniProjectHoveredFor1s(false);
-                      lastMiniProjectHoveredFor1sRef.current = false;
-                    }
                   }}
                 >
                   <div className="mini-project-rectangle">
@@ -4280,9 +4490,10 @@ function PortfolioApp() {
                   </div>
                   <div className="mini-project-info">
                     <h3 className="mini-project-title">Conscious Living</h3>
-                    <p className="mini-project-subtitle">Spearheading Online Sales</p>
+                    <p className="mini-project-subtitle">Online Sales</p>
                   </div>
-                  <p className="mini-project-body">During my time as part of the core team at Conscious Living Store, I took on the responsibility of building and launching their e-commerce platform using Shopify, working toward a mission that went far beyond simply selling products online. The company exists to accelerate the world's adoption of conscious, everyday products that exist in harmony with nature, but what made this particularly challenging and interesting was the need to make that transition feel completely seamless for customers.</p>
+                  <p className="mini-project-body">A full Shopify build that connected product storytelling with clear navigation, optimized checkout, and sustainable product presentation
+                  </p>
                 </div>
               </div>
             </div>
