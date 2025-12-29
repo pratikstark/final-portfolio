@@ -2598,6 +2598,66 @@ function PortfolioApp() {
     }
   }, [debugMode]);
 
+  // Horizontal scroll handler - converts left/right scroll to up/down (or left/right in horizontal sections)
+  useEffect(() => {
+    const handleWheel = (e) => {
+      // Only handle horizontal scrolling (deltaX)
+      const horizontalDelta = e.deltaX;
+      const verticalDelta = e.deltaY;
+      
+      // If there's significant horizontal scroll, convert it
+      if (Math.abs(horizontalDelta) > Math.abs(verticalDelta) && Math.abs(horizontalDelta) > 5) {
+        e.preventDefault();
+        
+        // Check if we're in a horizontal scrolling section
+        const projectsSection = document.querySelector('.main-projects');
+        const miniProjectsSection = document.querySelector('.mini-projects');
+        const projectsScrollTrigger = ScrollTrigger.getById('projects-scroll');
+        const miniProjectsScrollTrigger = ScrollTrigger.getById('mini-projects-scroll');
+        
+        const isInProjectsSection = projectsSection && 
+          projectsScrollTrigger && 
+          projectsScrollTrigger.isActive;
+        const isInMiniProjectsSection = miniProjectsSection && 
+          miniProjectsScrollTrigger && 
+          miniProjectsScrollTrigger.isActive;
+        
+        if (isInProjectsSection || isInMiniProjectsSection) {
+          // We're in a horizontal scrolling section
+          // Left scroll (negative deltaX) = scroll left (move backward in progress = scroll up)
+          // Right scroll (positive deltaX) = scroll right (move forward in progress = scroll down)
+          // Progress increases when scrolling down, so:
+          // - Left scroll (negative deltaX) → scroll up (negative top) → decrease progress → move left
+          // - Right scroll (positive deltaX) → scroll down (positive top) → increase progress → move right
+          const scrollAmount = horizontalDelta * 0.8; // Don't invert - direct mapping
+          
+          // Simulate vertical scroll which will naturally drive the ScrollTrigger
+          window.scrollBy({
+            top: scrollAmount,
+            behavior: 'auto'
+          });
+        } else {
+          // We're in a vertical scrolling section
+          // Left scroll (negative deltaX) = scroll up (negative top)
+          // Right scroll (positive deltaX) = scroll down (positive top)
+          const scrollAmount = horizontalDelta * 0.8; // Direct mapping
+          
+          window.scrollBy({
+            top: scrollAmount,
+            behavior: 'auto'
+          });
+        }
+      }
+    };
+    
+    // Add wheel event listener with passive: false to allow preventDefault
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    
+    return () => {
+      window.removeEventListener('wheel', handleWheel);
+    };
+  }, []);
+
   // Custom cursor with magnetic trail - ONLY for homepage
   useEffect(() => {
     let mouseX = window.innerWidth / 2;
