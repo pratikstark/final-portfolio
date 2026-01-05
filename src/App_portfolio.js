@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Volume2, VolumeX } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -375,6 +375,9 @@ function CodeIcon({ className = '' }) {
 
 // Main portfolio component - ONLY renders on homepage
 function PortfolioApp() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  
   const loaderRef = useRef(null);
   const loadingBarRef = useRef(null);
   const videoContainerRef = useRef(null);
@@ -396,6 +399,69 @@ function PortfolioApp() {
   const [showMobileAppOverlay, setShowMobileAppOverlay] = useState(false);
   const [showAIChatOverlay, setShowAIChatOverlay] = useState(false);
   const [showPravahOverlay, setShowPravahOverlay] = useState(false);
+  
+  // Project slug to overlay state mapping
+  const projectSlugMap = {
+    'animation-library': { setter: setShowPrismOverlay, getter: showPrismOverlay },
+    'cognixa': { setter: setShowCognixaOverlay, getter: showCognixaOverlay },
+    'settlin': { setter: setShowSettlinOverlay, getter: showSettlinOverlay },
+    'data-viz': { setter: setShowDataVizOverlay, getter: showDataVizOverlay },
+    'mobile-app': { setter: setShowMobileAppOverlay, getter: showMobileAppOverlay },
+    'ai-chat': { setter: setShowAIChatOverlay, getter: showAIChatOverlay },
+    'pravah': { setter: setShowPravahOverlay, getter: showPravahOverlay }
+  };
+  
+  // Sync URL hash with overlay state
+  useEffect(() => {
+    const hash = location.hash.slice(1); // Remove the # symbol
+    const project = projectSlugMap[hash];
+    
+    if (hash && project) {
+      // Open overlay if URL has hash and overlay is not already open
+      if (!project.getter) {
+        project.setter(true);
+      }
+    } else if (!hash) {
+      // Close all overlays if no hash
+      Object.values(projectSlugMap).forEach(({ getter, setter }) => {
+        if (getter) {
+          setter(false);
+        }
+      });
+    }
+  }, [location.hash, showPrismOverlay, showCognixaOverlay, showSettlinOverlay, showDataVizOverlay, showMobileAppOverlay, showAIChatOverlay, showPravahOverlay]);
+  
+  // Helper function to open overlay with URL update
+  const openOverlay = (projectSlug) => {
+    const project = projectSlugMap[projectSlug];
+    if (project) {
+      project.setter(true);
+      // Use replace: false to add to history so back button works
+      navigate(`#${projectSlug}`, { replace: false });
+    }
+  };
+  
+  // Helper function to close overlay with URL update
+  const closeOverlay = (projectSlug) => {
+    const project = projectSlugMap[projectSlug];
+    if (project) {
+      project.setter(false);
+      // Use replace: false to add to history so back button works
+      navigate('#', { replace: false });
+    }
+  };
+  
+  // Close all overlays helper
+  const closeAllOverlays = () => {
+    Object.keys(projectSlugMap).forEach(slug => {
+      const project = projectSlugMap[slug];
+      if (project.getter) {
+        project.setter(false);
+      }
+    });
+    // Use replace: false to add to history so back button works
+    navigate('#', { replace: false });
+  };
 
   // Track session start time and scroll depth
   const sessionStartTime = useRef(Date.now());
@@ -521,8 +587,12 @@ function PortfolioApp() {
   const thirdProjectHoveredFor1sRef = useRef(false);
   const lastScrollProgressRef = useRef(0);
   const isScrollingDownRef = useRef(false);
+  const scrollVelocityRef = useRef(0);
+  const lastScrollTimeRef = useRef(Date.now());
   const lastMiniScrollProgressRef = useRef(0);
   const isMiniScrollingDownRef = useRef(false);
+  const miniScrollVelocityRef = useRef(0);
+  const lastMiniScrollTimeRef = useRef(Date.now());
   const lastVerticalScrollYRef = useRef(0);
   const isScrollingUpwardRef = useRef(false);
   const previousHoveredProjectRef = useRef(null);
@@ -667,13 +737,7 @@ function PortfolioApp() {
       // Handle Escape key
       const handleEscape = (e) => {
         if (e.key === 'Escape') {
-          setShowPrismOverlay(false);
-          setShowCognixaOverlay(false);
-          setShowSettlinOverlay(false);
-          setShowDataVizOverlay(false);
-          setShowMobileAppOverlay(false);
-          setShowAIChatOverlay(false);
-          setShowPravahOverlay(false);
+          closeAllOverlays();
         }
       };
       window.addEventListener('keydown', handleEscape);
@@ -1476,7 +1540,7 @@ function PortfolioApp() {
           start: 'top top',
           end: '+=600vh', // Reduced track for more responsive scrolling
           pin: true, // Re-enabled for scroll effects
-          scrub: 0.5, // Match vertical scroll sensitivity for smooth transition
+          scrub: 0.3, // More responsive for smoother, more immediate scrolling
           anticipatePin: 1,
           snap: {
             snapTo: (progress) => {
@@ -1486,15 +1550,51 @@ function PortfolioApp() {
                 return null; // Disable snap when scrolling down past third project
               }
 
-              // Snap to nearest project point
+              // Get current velocity
+              const velocity = Math.abs(scrollVelocityRef.current);
+              const HIGH_VELOCITY_THRESHOLD = 0.015; // High scroll speed - scroll past without snapping
+              const LOW_VELOCITY_THRESHOLD = 0.002; // Low scroll speed - show attempted movement but don't snap
+
+              // If velocity is very high, don't snap - allow fast scrolling past
+              if (velocity > HIGH_VELOCITY_THRESHOLD) {
+                return null;
+              }
+
+              // Snap points
               const snapPoints = [0, 0.5, 1];
-              return snapPoints.reduce((prev, curr) =>
+              const nearestSnapPoint = snapPoints.reduce((prev, curr) =>
                 Math.abs(curr - progress) < Math.abs(prev - progress) ? curr : prev
               );
+              
+              // Distance to nearest snap point
+              const distanceToSnap = Math.abs(progress - nearestSnapPoint);
+              
+              // If velocity is low and we're close to a snap point, snap immediately
+              // If velocity is low but we're far, show attempted movement (return current progress with slight pull)
+              if (velocity < LOW_VELOCITY_THRESHOLD) {
+                if (distanceToSnap < 0.15) {
+                  // Close enough - snap immediately
+                  return nearestSnapPoint;
+                } else {
+                  // Too far - show attempted movement by slightly pulling toward snap point
+                  const pullStrength = 0.3; // How much to pull (0-1)
+                  const pullDirection = nearestSnapPoint > progress ? 1 : -1;
+                  const pulledProgress = progress + (distanceToSnap * pullStrength * pullDirection);
+                  return pulledProgress;
+                }
+              }
+
+              // Medium velocity - snap if close enough, otherwise continue scrolling
+              if (distanceToSnap < 0.1) {
+                return nearestSnapPoint;
+              }
+
+              // Default: snap to nearest
+              return nearestSnapPoint;
             },
-            duration: { min: 0.1, max: 0.15 }, // Fast snap
-            delay: 0.3, // Only snap after scrolling stops (300ms delay)
-            ease: "power2.out", // Smooth, fast snap
+            duration: { min: 0.05, max: 0.2 }, // Very fast snap when close, slightly longer when far
+            delay: 0, // No delay - snap immediately during scroll
+            ease: "power1.out", // Very smooth easing
             directional: false,
             inertia: true // Allow natural momentum scrolling
           },
@@ -1507,11 +1607,20 @@ function PortfolioApp() {
           onUpdate: (self) => {
             const progress = self.progress;
 
-            // Track scroll direction
+            // Track scroll direction and velocity
             const previousProgress = lastScrollProgressRef.current;
             const isScrollingDown = progress > previousProgress;
             isScrollingDownRef.current = isScrollingDown;
             const isScrolling = Math.abs(progress - previousProgress) > 0.0001; // More sensitive threshold
+            
+            // Calculate velocity (change in progress per millisecond)
+            const now = Date.now();
+            const timeDelta = now - lastScrollTimeRef.current;
+            if (timeDelta > 0) {
+              const progressDelta = Math.abs(progress - previousProgress);
+              scrollVelocityRef.current = progressDelta / timeDelta; // Progress per ms
+            }
+            lastScrollTimeRef.current = now;
             lastScrollProgressRef.current = progress;
 
             // Determine which project will be snapped to based on nearest snap point
@@ -1643,20 +1752,66 @@ function PortfolioApp() {
             // Update previous hover state
             previousHoveredProjectRef.current = currentHoveredProject;
 
-            // Calculate smooth position for immediate visual feedback
+            // Calculate smooth position for immediate visual feedback with velocity-based magnetic attraction
             // Interpolate through all three card positions for magnetic movement with easing
+            const velocity = Math.abs(scrollVelocityRef.current);
+            const HIGH_VELOCITY_THRESHOLD = 0.015;
+            const LOW_VELOCITY_THRESHOLD = 0.002;
+            
             let smoothX;
             if (progress <= 0.5) {
               // Interpolate between first card (progress 0) and second card (progress 0.5)
               const localProgress = progress / 0.5; // 0 to 1 between first and second card
-              // Apply easing for smoother magnetic movement
-              const easedProgress = gsap.parseEase("power2.out")(localProgress);
+              
+              // Apply velocity-based magnetic attraction
+              let easedProgress;
+              if (velocity > HIGH_VELOCITY_THRESHOLD) {
+                // High velocity - linear, no magnetic pull
+                easedProgress = localProgress;
+              } else if (velocity < LOW_VELOCITY_THRESHOLD) {
+                // Low velocity - strong magnetic pull toward snap points
+                const snapPoint = localProgress < 0.5 ? 0 : 0.5;
+                const distanceToSnap = Math.abs(localProgress - snapPoint);
+                const magneticPull = 1 - (distanceToSnap * 2); // Stronger pull when closer
+                easedProgress = localProgress + (magneticPull * 0.15 * (snapPoint > localProgress ? 1 : -1));
+                easedProgress = Math.max(0, Math.min(1, easedProgress)); // Clamp
+              } else {
+                // Medium velocity - moderate magnetic pull
+                const eased = gsap.parseEase("power1.out")(localProgress);
+                const snapPoint = localProgress < 0.5 ? 0 : 0.5;
+                const distanceToSnap = Math.abs(localProgress - snapPoint);
+                const magneticPull = (1 - distanceToSnap * 2) * 0.1;
+                easedProgress = eased + (magneticPull * (snapPoint > localProgress ? 1 : -1));
+                easedProgress = Math.max(0, Math.min(1, easedProgress));
+              }
+              
               smoothX = gsap.utils.interpolate(cardPositions[0], cardPositions[1], easedProgress);
             } else {
               // Interpolate between second card (progress 0.5) and third card (progress 1)
               const localProgress = (progress - 0.5) / 0.5; // 0 to 1 between second and third card
-              // Apply easing for smoother magnetic movement
-              const easedProgress = gsap.parseEase("power2.out")(localProgress);
+              
+              // Apply velocity-based magnetic attraction
+              let easedProgress;
+              if (velocity > HIGH_VELOCITY_THRESHOLD) {
+                // High velocity - linear, no magnetic pull
+                easedProgress = localProgress;
+              } else if (velocity < LOW_VELOCITY_THRESHOLD) {
+                // Low velocity - strong magnetic pull toward snap points
+                const snapPoint = localProgress < 0.5 ? 0.5 : 1;
+                const distanceToSnap = Math.abs(localProgress - snapPoint);
+                const magneticPull = 1 - (distanceToSnap * 2);
+                easedProgress = localProgress + (magneticPull * 0.15 * (snapPoint > localProgress ? 1 : -1));
+                easedProgress = Math.max(0, Math.min(1, easedProgress));
+              } else {
+                // Medium velocity - moderate magnetic pull
+                const eased = gsap.parseEase("power1.out")(localProgress);
+                const snapPoint = localProgress < 0.5 ? 0.5 : 1;
+                const distanceToSnap = Math.abs(localProgress - snapPoint);
+                const magneticPull = (1 - distanceToSnap * 2) * 0.1;
+                easedProgress = eased + (magneticPull * (snapPoint > localProgress ? 1 : -1));
+                easedProgress = Math.max(0, Math.min(1, easedProgress));
+              }
+              
               smoothX = gsap.utils.interpolate(cardPositions[1], cardPositions[2], easedProgress);
             }
 
@@ -1871,7 +2026,7 @@ function PortfolioApp() {
           end: '+=600vh', // Reduced track for more responsive scrolling
           pin: true, // Re-enabled for scroll effects
           pinSpacing: true,
-          scrub: 0.5, // Match vertical scroll sensitivity for smooth transition
+          scrub: 0.3, // More responsive for smoother, more immediate scrolling
           anticipatePin: 1,
           invalidateOnRefresh: false,
           refreshPriority: -1,
@@ -1883,15 +2038,51 @@ function PortfolioApp() {
                 return null; // Disable snap when scrolling down past last mini project
               }
 
-              // Snap to nearest project point
+              // Get current velocity
+              const velocity = Math.abs(miniScrollVelocityRef.current);
+              const HIGH_VELOCITY_THRESHOLD = 0.015; // High scroll speed - scroll past without snapping
+              const LOW_VELOCITY_THRESHOLD = 0.002; // Low scroll speed - show attempted movement but don't snap
+
+              // If velocity is very high, don't snap - allow fast scrolling past
+              if (velocity > HIGH_VELOCITY_THRESHOLD) {
+                return null;
+              }
+
+              // Snap points
               const snapPoints = [0, 0.33, 0.66, 1];
-              return snapPoints.reduce((prev, curr) =>
+              const nearestSnapPoint = snapPoints.reduce((prev, curr) =>
                 Math.abs(curr - progress) < Math.abs(prev - progress) ? curr : prev
               );
+              
+              // Distance to nearest snap point
+              const distanceToSnap = Math.abs(progress - nearestSnapPoint);
+              
+              // If velocity is low and we're close to a snap point, snap immediately
+              // If velocity is low but we're far, show attempted movement (return current progress with slight pull)
+              if (velocity < LOW_VELOCITY_THRESHOLD) {
+                if (distanceToSnap < 0.15) {
+                  // Close enough - snap immediately
+                  return nearestSnapPoint;
+                } else {
+                  // Too far - show attempted movement by slightly pulling toward snap point
+                  const pullStrength = 0.3; // How much to pull (0-1)
+                  const pullDirection = nearestSnapPoint > progress ? 1 : -1;
+                  const pulledProgress = progress + (distanceToSnap * pullStrength * pullDirection);
+                  return pulledProgress;
+                }
+              }
+
+              // Medium velocity - snap if close enough, otherwise continue scrolling
+              if (distanceToSnap < 0.1) {
+                return nearestSnapPoint;
+              }
+
+              // Default: snap to nearest
+              return nearestSnapPoint;
             },
-            duration: { min: 0.1, max: 0.15 }, // Fast snap
-            delay: 0.3, // Only snap after scrolling stops (300ms delay)
-            ease: "power2.out", // Smooth, fast snap
+            duration: { min: 0.05, max: 0.2 }, // Very fast snap when close, slightly longer when far
+            delay: 0, // No delay - snap immediately during scroll
+            ease: "power1.out", // Very smooth easing
             directional: false,
             inertia: true // Allow natural momentum scrolling
           },
@@ -1904,11 +2095,20 @@ function PortfolioApp() {
           onUpdate: (self) => {
             const progress = self.progress;
 
-            // Track scroll direction
+            // Track scroll direction and velocity
             const previousProgress = lastMiniScrollProgressRef.current;
             const isScrollingDown = progress > previousProgress;
             isMiniScrollingDownRef.current = isScrollingDown;
             const isScrolling = Math.abs(progress - previousProgress) > 0.0001; // More sensitive threshold
+            
+            // Calculate velocity (change in progress per millisecond)
+            const now = Date.now();
+            const timeDelta = now - lastMiniScrollTimeRef.current;
+            if (timeDelta > 0) {
+              const progressDelta = Math.abs(progress - previousProgress);
+              miniScrollVelocityRef.current = progressDelta / timeDelta; // Progress per ms
+            }
+            lastMiniScrollTimeRef.current = now;
             lastMiniScrollProgressRef.current = progress;
 
             // Determine which project will be snapped to based on nearest snap point
@@ -1938,8 +2138,11 @@ function PortfolioApp() {
               activeCardIndex = 3;
             }
 
-            // Check if we're at a snap point (centered) - within 5% of snap points for better tolerance
-            const isAtSnapPoint = snapPoints.some(snapPoint => Math.abs(progress - snapPoint) < 0.05);
+            // Check if we're at a snap point (centered) - within 3% of snap points for tighter tolerance
+            // Also consider velocity - if velocity is very low and we're close, consider it centered
+            const velocity = Math.abs(miniScrollVelocityRef.current);
+            const snapTolerance = velocity < 0.002 ? 0.08 : 0.03; // Wider tolerance when slow
+            const isAtSnapPoint = snapPoints.some(snapPoint => Math.abs(progress - snapPoint) < snapTolerance);
 
             // Detect scrolling while hovered and trigger transition
             const currentHoveredMiniProject = hoveredMiniProject;
@@ -2030,26 +2233,87 @@ function PortfolioApp() {
             // Update previous hover state
             previousHoveredMiniProjectRef.current = currentHoveredMiniProject;
 
-            // Calculate smooth position for immediate visual feedback
-            // Interpolate through all four card positions for magnetic movement with easing (same as main projects)
+            // Calculate smooth position for immediate visual feedback with velocity-based magnetic attraction
+            // Interpolate through all four card positions for magnetic movement with easing
+            // Reuse velocity already calculated above
+            const HIGH_VELOCITY_THRESHOLD = 0.015;
+            const LOW_VELOCITY_THRESHOLD = 0.002;
+            
             let smoothX;
             if (progress <= 0.33) {
               // Interpolate between first card (progress 0) and second card (progress 0.33)
               const localProgress = progress / 0.33; // 0 to 1 between first and second card
-              // Apply easing for smoother magnetic movement
-              const easedProgress = gsap.parseEase("power2.out")(localProgress);
+              
+              // Apply velocity-based magnetic attraction
+              let easedProgress;
+              if (velocity > HIGH_VELOCITY_THRESHOLD) {
+                // High velocity - linear, no magnetic pull
+                easedProgress = localProgress;
+              } else if (velocity < LOW_VELOCITY_THRESHOLD) {
+                // Low velocity - strong magnetic pull toward snap points
+                const snapPoint = localProgress < 0.5 ? 0 : 0.33;
+                const distanceToSnap = Math.abs(localProgress - snapPoint);
+                const magneticPull = 1 - (distanceToSnap * 2);
+                easedProgress = localProgress + (magneticPull * 0.15 * (snapPoint > localProgress ? 1 : -1));
+                easedProgress = Math.max(0, Math.min(1, easedProgress));
+              } else {
+                // Medium velocity - moderate magnetic pull
+                const eased = gsap.parseEase("power1.out")(localProgress);
+                const snapPoint = localProgress < 0.5 ? 0 : 0.33;
+                const distanceToSnap = Math.abs(localProgress - snapPoint);
+                const magneticPull = (1 - distanceToSnap * 2) * 0.1;
+                easedProgress = eased + (magneticPull * (snapPoint > localProgress ? 1 : -1));
+                easedProgress = Math.max(0, Math.min(1, easedProgress));
+              }
+              
               smoothX = gsap.utils.interpolate(cardPositions[0], cardPositions[1], easedProgress);
             } else if (progress <= 0.66) {
               // Interpolate between second card (progress 0.33) and third card (progress 0.66)
               const localProgress = (progress - 0.33) / 0.33; // 0 to 1 between second and third card
-              // Apply easing for smoother magnetic movement
-              const easedProgress = gsap.parseEase("power2.out")(localProgress);
+              
+              // Apply velocity-based magnetic attraction
+              let easedProgress;
+              if (velocity > HIGH_VELOCITY_THRESHOLD) {
+                easedProgress = localProgress;
+              } else if (velocity < LOW_VELOCITY_THRESHOLD) {
+                const snapPoint = localProgress < 0.5 ? 0.33 : 0.66;
+                const distanceToSnap = Math.abs(localProgress - snapPoint);
+                const magneticPull = 1 - (distanceToSnap * 2);
+                easedProgress = localProgress + (magneticPull * 0.15 * (snapPoint > localProgress ? 1 : -1));
+                easedProgress = Math.max(0, Math.min(1, easedProgress));
+              } else {
+                const eased = gsap.parseEase("power1.out")(localProgress);
+                const snapPoint = localProgress < 0.5 ? 0.33 : 0.66;
+                const distanceToSnap = Math.abs(localProgress - snapPoint);
+                const magneticPull = (1 - distanceToSnap * 2) * 0.1;
+                easedProgress = eased + (magneticPull * (snapPoint > localProgress ? 1 : -1));
+                easedProgress = Math.max(0, Math.min(1, easedProgress));
+              }
+              
               smoothX = gsap.utils.interpolate(cardPositions[1], cardPositions[2], easedProgress);
             } else {
               // Interpolate between third card (progress 0.66) and fourth card (progress 1)
               const localProgress = (progress - 0.66) / 0.34; // 0 to 1 between third and fourth card
-              // Apply easing for smoother magnetic movement
-              const easedProgress = gsap.parseEase("power2.out")(localProgress);
+              
+              // Apply velocity-based magnetic attraction
+              let easedProgress;
+              if (velocity > HIGH_VELOCITY_THRESHOLD) {
+                easedProgress = localProgress;
+              } else if (velocity < LOW_VELOCITY_THRESHOLD) {
+                const snapPoint = localProgress < 0.5 ? 0.66 : 1;
+                const distanceToSnap = Math.abs(localProgress - snapPoint);
+                const magneticPull = 1 - (distanceToSnap * 2);
+                easedProgress = localProgress + (magneticPull * 0.15 * (snapPoint > localProgress ? 1 : -1));
+                easedProgress = Math.max(0, Math.min(1, easedProgress));
+              } else {
+                const eased = gsap.parseEase("power1.out")(localProgress);
+                const snapPoint = localProgress < 0.5 ? 0.66 : 1;
+                const distanceToSnap = Math.abs(localProgress - snapPoint);
+                const magneticPull = (1 - distanceToSnap * 2) * 0.1;
+                easedProgress = eased + (magneticPull * (snapPoint > localProgress ? 1 : -1));
+                easedProgress = Math.max(0, Math.min(1, easedProgress));
+              }
+              
               smoothX = gsap.utils.interpolate(cardPositions[2], cardPositions[3] || cardPositions[2], easedProgress);
             }
 
@@ -4090,19 +4354,9 @@ function PortfolioApp() {
         e.preventDefault();
         e.stopPropagation();
         
-        // Map project IDs to overlay setters
-        const overlayMap = {
-          'cognixa': () => setShowCognixaOverlay(true),
-          'settlin': () => setShowSettlinOverlay(true),
-          'mobile-app': () => setShowMobileAppOverlay(true),
-          'animation-library': () => setShowPrismOverlay(true),
-          'data-viz': () => setShowDataVizOverlay(true),
-          'ai-chat': () => setShowAIChatOverlay(true)
-        };
-        
-        const openOverlay = overlayMap[projectId];
-        if (openOverlay) {
-          openOverlay();
+        // Open overlay with URL update
+        if (projectId && projectSlugMap[projectId]) {
+          openOverlay(projectId);
         }
       }
     };
@@ -4316,7 +4570,7 @@ function PortfolioApp() {
                 }}
                 onClick={() => {
                   trackProjectView('Cognixa', 'main');
-                  setShowCognixaOverlay(true);
+                  openOverlay('cognixa');
                 }}
                 style={debugMode ? { border: '2px solid red' } : {}}
               >
@@ -4368,7 +4622,7 @@ function PortfolioApp() {
                 }}
                 onClick={() => {
                   trackProjectView('Settlin', 'main');
-                  setShowSettlinOverlay(true);
+                  openOverlay('settlin');
                 }}
                 style={debugMode ? { border: '2px solid green' } : {}}
               >
@@ -4420,7 +4674,7 @@ function PortfolioApp() {
                 }}
                 onClick={() => {
                   trackProjectView('Pravah', 'main');
-                  setShowPravahOverlay(true);
+                  openOverlay('pravah');
                 }}
                 style={debugMode ? { border: '2px solid blue' } : {}}
               >
@@ -4485,7 +4739,7 @@ function PortfolioApp() {
                 <div
                   onClick={() => {
                     trackProjectView('Prism', 'mini');
-                    setShowPrismOverlay(true);
+                    openOverlay('animation-library');
                   }}
                   className={`mini-project-card purple-project ${hoveredMiniProject === 'animation-library' ? 'hovered' : ''}`}
                   onMouseEnter={() => handleMiniProjectHover('animation-library')}
@@ -4514,7 +4768,7 @@ function PortfolioApp() {
                 <div
                   onClick={() => {
                     trackProjectView('JARVIS', 'mini');
-                    setShowDataVizOverlay(true);
+                    openOverlay('data-viz');
                   }}
                   className={`mini-project-card orange-project ${hoveredMiniProject === 'data-viz' ? 'hovered' : ''}`}
                   onMouseEnter={() => handleMiniProjectHover('data-viz')}
@@ -4543,7 +4797,7 @@ function PortfolioApp() {
                 <div
                   onClick={() => {
                     trackProjectView('Bloom Bakehouse', 'mini');
-                    setShowMobileAppOverlay(true);
+                    openOverlay('mobile-app');
                   }}
                   className={`mini-project-card teal-project ${hoveredMiniProject === 'mobile-app' ? 'hovered' : ''}`}
                   onMouseEnter={() => handleMiniProjectHover('mobile-app')}
@@ -4574,7 +4828,7 @@ function PortfolioApp() {
                 <div
                   onClick={() => {
                     trackProjectView('Conscious Living', 'mini');
-                    setShowAIChatOverlay(true);
+                    openOverlay('ai-chat');
                   }}
                   className={`mini-project-card yellow-project ${hoveredMiniProject === 'ai-chat' ? 'hovered' : ''}`}
                   onMouseEnter={() => handleMiniProjectHover('ai-chat')}
@@ -4652,13 +4906,13 @@ function PortfolioApp() {
       {showPrismOverlay && (
         <div className="project-overlay" onClick={(e) => {
           if (e.target.classList.contains('project-overlay')) {
-            setShowPrismOverlay(false);
+            closeOverlay('animation-library');
           }
         }}>
           <div className="project-overlay-content">
             <button 
               className="project-overlay-close"
-              onClick={() => setShowPrismOverlay(false)}
+              onClick={() => closeOverlay('animation-library')}
               aria-label="Close overlay"
             >
               ×
@@ -4674,13 +4928,13 @@ function PortfolioApp() {
       {showDataVizOverlay && (
         <div className="project-overlay" onClick={(e) => {
           if (e.target.classList.contains('project-overlay')) {
-            setShowDataVizOverlay(false);
+            closeOverlay('data-viz');
           }
         }}>
           <div className="project-overlay-content">
             <button 
               className="project-overlay-close"
-              onClick={() => setShowDataVizOverlay(false)}
+              onClick={() => closeOverlay('data-viz')}
               aria-label="Close overlay"
             >
               ×
@@ -4695,13 +4949,13 @@ function PortfolioApp() {
       {showMobileAppOverlay && (
         <div className="project-overlay" onClick={(e) => {
           if (e.target.classList.contains('project-overlay')) {
-            setShowMobileAppOverlay(false);
+            closeOverlay('mobile-app');
           }
         }}>
           <div className="project-overlay-content">
             <button 
               className="project-overlay-close"
-              onClick={() => setShowMobileAppOverlay(false)}
+              onClick={() => closeOverlay('mobile-app')}
               aria-label="Close overlay"
             >
               ×
@@ -4716,13 +4970,13 @@ function PortfolioApp() {
       {showCognixaOverlay && (
         <div className="project-overlay" onClick={(e) => {
           if (e.target.classList.contains('project-overlay')) {
-            setShowCognixaOverlay(false);
+            closeOverlay('cognixa');
           }
         }}>
           <div className="project-overlay-content">
             <button 
               className="project-overlay-close"
-              onClick={() => setShowCognixaOverlay(false)}
+              onClick={() => closeOverlay('cognixa')}
               aria-label="Close overlay"
             >
               ×
@@ -4737,13 +4991,13 @@ function PortfolioApp() {
       {showSettlinOverlay && (
         <div className="project-overlay" onClick={(e) => {
           if (e.target.classList.contains('project-overlay')) {
-            setShowSettlinOverlay(false);
+            closeOverlay('settlin');
           }
         }}>
           <div className="project-overlay-content">
             <button 
               className="project-overlay-close"
-              onClick={() => setShowSettlinOverlay(false)}
+              onClick={() => closeOverlay('settlin')}
               aria-label="Close overlay"
             >
               ×
@@ -4758,13 +5012,13 @@ function PortfolioApp() {
       {showAIChatOverlay && (
         <div className="project-overlay" onClick={(e) => {
           if (e.target.classList.contains('project-overlay')) {
-            setShowAIChatOverlay(false);
+            closeOverlay('ai-chat');
           }
         }}>
           <div className="project-overlay-content">
             <button 
               className="project-overlay-close"
-              onClick={() => setShowAIChatOverlay(false)}
+              onClick={() => closeOverlay('ai-chat')}
               aria-label="Close overlay"
             >
               ×
@@ -4779,13 +5033,13 @@ function PortfolioApp() {
       {showPravahOverlay && (
         <div className="project-overlay" onClick={(e) => {
           if (e.target.classList.contains('project-overlay')) {
-            setShowPravahOverlay(false);
+            closeOverlay('pravah');
           }
         }}>
           <div className="project-overlay-content">
             <button 
               className="project-overlay-close"
-              onClick={() => setShowPravahOverlay(false)}
+              onClick={() => closeOverlay('pravah')}
               aria-label="Close overlay"
             >
               ×

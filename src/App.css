@@ -840,6 +840,7 @@ body:has(.main-projects.dark-mode) .cursor-trail.magnetic-square {
 }
 
 .about-kicker {
+  font-family: Montserrat;
   font-size: clamp(12px, 1.8vw, 16px);
   color: #333;
   margin-bottom: clamp(12px, 2vw, 16px);
@@ -1290,6 +1291,7 @@ body:has(.main-projects.dark-mode) .cursor-trail.magnetic-square {
 
 .about-col-left,
 .about-col-right {
+  font-family: Montserrat;
   font-size: clamp(14px, 1.8vw, 18px);
   line-height: 1.6;
   color: #111;
@@ -1304,12 +1306,14 @@ body:has(.main-projects.dark-mode) .cursor-trail.magnetic-square {
 }
 
 .about-strong {
+  font-family: Montserrat;
   font-weight: 700;
 
   box-sizing: border-box;
 }
 
 .about-caption {
+  font-family: Montserrat;
   color: #444;
   font-style: italic;
 
@@ -2210,6 +2214,7 @@ body.debug-mode::after {
 }
 
 .project-subtitle {
+  font-family: Montserrat;
   font-size: 14px;
   font-weight: 400;
   color: #555;
