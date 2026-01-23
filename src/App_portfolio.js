@@ -400,14 +400,14 @@ function PortfolioApp() {
   const [showAIChatOverlay, setShowAIChatOverlay] = useState(false);
   const [showPravahOverlay, setShowPravahOverlay] = useState(false);
   
-  // Project slug to overlay state mapping
+  // Project slug to overlay state mapping - using actual project names
   const projectSlugMap = {
-    'animation-library': { setter: setShowPrismOverlay, getter: showPrismOverlay },
+    'prism': { setter: setShowPrismOverlay, getter: showPrismOverlay },
     'cognixa': { setter: setShowCognixaOverlay, getter: showCognixaOverlay },
     'settlin': { setter: setShowSettlinOverlay, getter: showSettlinOverlay },
-    'data-viz': { setter: setShowDataVizOverlay, getter: showDataVizOverlay },
-    'mobile-app': { setter: setShowMobileAppOverlay, getter: showMobileAppOverlay },
-    'ai-chat': { setter: setShowAIChatOverlay, getter: showAIChatOverlay },
+    'jarvis': { setter: setShowDataVizOverlay, getter: showDataVizOverlay },
+    'bloom-bakehouse': { setter: setShowMobileAppOverlay, getter: showMobileAppOverlay },
+    'conscious-living': { setter: setShowAIChatOverlay, getter: showAIChatOverlay },
     'pravah': { setter: setShowPravahOverlay, getter: showPravahOverlay }
   };
   
@@ -1724,7 +1724,7 @@ function PortfolioApp() {
               let fromProjectIndex = null;
               if (previousHoveredProject === 'cognixa') fromProjectIndex = 0;
               else if (previousHoveredProject === 'settlin') fromProjectIndex = 1;
-              else if (previousHoveredProject === 'data-viz') fromProjectIndex = 2;
+              else if (previousHoveredProject === 'pravah') fromProjectIndex = 2;
 
               // Check if we're moving to a different project
               const isMovingToDifferentProject = fromProjectIndex !== null && activeCardIndex !== fromProjectIndex;
@@ -2170,7 +2170,7 @@ function PortfolioApp() {
                 isScrollingToDifferentMiniProjectRef.current = true;
 
                 // Determine which project should be hovered based on scroll position
-                const miniProjectIds = ['animation-library', 'data-viz', 'mobile-app', 'ai-chat'];
+                const miniProjectIds = ['prism', 'jarvis', 'bloom-bakehouse', 'conscious-living'];
                 const targetProjectId = miniProjectIds[activeCardIndex];
 
                 // Continuously maintain hover state for the active project during scroll
@@ -2200,10 +2200,10 @@ function PortfolioApp() {
             if (previousHoveredMiniProject && isScrolling && !isTransitioningRef.current) {
               // Find the index of the previous hovered mini project (before update)
               const projectCardClassMap = {
-                'animation-library': 0,
-                'data-viz': 1,
-                'mobile-app': 2,
-                'ai-chat': 3
+                'prism': 0,
+                'jarvis': 1,
+                'bloom-bakehouse': 2,
+                'conscious-living': 3
               };
               const fromProjectIndex = projectCardClassMap[previousHoveredMiniProject] ?? null;
 
@@ -3661,12 +3661,12 @@ function PortfolioApp() {
       design: {
         icon: <DesignIcon />,
         title: 'Design',
-        body: `<p>My design journey started in <strong>2018</strong> with my first part-time job as a graphic designer. That year taught me how important design is for communicating ideas clearly and fast. I took on freelance projects across <strong>Illustrator, After Effects, and Figma</strong>, which helped me build a solid foundation.</p><p>Since then, I've created full design systems and brand identities for different clients. One example is <u data-project="mobile-app">Bloom Bakehouse</u>, where I worked on everything from the logo and packaging to brand guidelines that improved their presence. I also created the full visual identity for <u data-project="cognixa">Cognixa</u> encompassing range across digital and physical touchpoints.</p><p>Most recently, at <u data-project="settlin">Settlin</u>, a proptech company, I worked as a <strong>UI/UX Designer</strong> for nine months. I refined user flows, built scalable design systems, designed their pitch deck, and worked closely with engineers to make sure everything shipped properly. I also designed parts of their internal CMS and mobile app.</p><p>I combined design, code, and research in <u data-project="animation-library">Prism</u>, my color palette generator based on perceptual color science. It creates visually consistent palettes that make sense to both designers and developers.</p>`
+        body: `<p>My design journey started in <strong>2018</strong> with my first part-time job as a graphic designer. That year taught me how important design is for communicating ideas clearly and fast. I took on freelance projects across <strong>Illustrator, After Effects, and Figma</strong>, which helped me build a solid foundation.</p><p>Since then, I've created full design systems and brand identities for different clients. One example is <u data-project="bloom-bakehouse">Bloom Bakehouse</u>, where I worked on everything from the logo and packaging to brand guidelines that improved their presence. I also created the full visual identity for <u data-project="cognixa">Cognixa</u> encompassing range across digital and physical touchpoints.</p><p>Most recently, at <u data-project="settlin">Settlin</u>, a proptech company, I worked as a <strong>UI/UX Designer</strong> for nine months. I refined user flows, built scalable design systems, designed their pitch deck, and worked closely with engineers to make sure everything shipped properly. I also designed parts of their internal CMS and mobile app.</p><p>I combined design, code, and research in <u data-project="prism">Prism</u>, my color palette generator based on perceptual color science. It creates visually consistent palettes that make sense to both designers and developers.</p>`
       },
       code: {
         icon: <CodeIcon />,
         title: 'Code',
-        body: `<p>My development journey began in <strong>2019</strong> with <u data-project="">UBU Community</u>, my first paid web project, which was a static site built with <strong>HTML, CSS, and native code</strong>. That project strengthened my basics in layouts, states, interactions, and animations.</p><p>At <u data-project="settlin">Settlin</u>, I reached a milestone that meant a lot to me: shipping production Flutter screens even though my role was primarily design-focused. This helped close the gap between design and engineering and delivered real business value when resources were tight.</p><p>I've also contributed <strong>React</strong> code at Settlin and built <u data-project="cognixa">Cognixa</u> entirely on a React architecture. While I don't consider myself a highly advanced engineer, I naturally think in systems. That helps reduce friction between design and development and speeds up how projects move.</p><p><u data-project="animation-library">Prism</u> is where my technical and design skills meet. It uses perceptual color science, has integrated analytics and behavior tracking, and exports palettes in formats that are actually useful in daily design work.</p><p>My engineering approach focuses on problem-solving instead of complexity. I care about clarity, user impact, and business outcomes, which helps me contribute meaningfully even outside traditional design boundaries.</p>`
+        body: `<p>My development journey began in <strong>2019</strong> with <u data-project="">UBU Community</u>, my first paid web project, which was a static site built with <strong>HTML, CSS, and native code</strong>. That project strengthened my basics in layouts, states, interactions, and animations.</p><p>At <u data-project="settlin">Settlin</u>, I reached a milestone that meant a lot to me: shipping production Flutter screens even though my role was primarily design-focused. This helped close the gap between design and engineering and delivered real business value when resources were tight.</p><p>I've also contributed <strong>React</strong> code at Settlin and built <u data-project="cognixa">Cognixa</u> entirely on a React architecture. While I don't consider myself a highly advanced engineer, I naturally think in systems. That helps reduce friction between design and development and speeds up how projects move.</p><p><u data-project="prism">Prism</u> is where my technical and design skills meet. It uses perceptual color science, has integrated analytics and behavior tracking, and exports palettes in formats that are actually useful in daily design work.</p><p>My engineering approach focuses on problem-solving instead of complexity. I care about clarity, user impact, and business outcomes, which helps me contribute meaningfully even outside traditional design boundaries.</p>`
       }
     };
     return data[section] || null;
@@ -3730,16 +3730,16 @@ function PortfolioApp() {
 
   const getMiniProjectData = (projectId) => {
     const projects = {
-      'animation-library': {
+      'prism': {
         color: '#E6E6E6' // Purple
       },
-      'data-viz': {
+      'jarvis': {
         color: '#76E2E4' // Orange
       },
-      'mobile-app': {
+      'bloom-bakehouse': {
         color: '#EBDCC9' // Teal
       },
-      'ai-chat': {
+      'conscious-living': {
         color: '#013301' // Yellow
       }
     };
@@ -3963,7 +3963,7 @@ function PortfolioApp() {
     const isLastMiniProjectCentered = lastMiniProjectCard && lastMiniProjectCard.classList.contains('centered');
 
     const miniProjectsScrollTrigger = ScrollTrigger.getById('mini-projects-scroll');
-    const isLastMiniProject = projectId === 'ai-chat';
+    const isLastMiniProject = projectId === 'conscious-living';
 
     // Only scroll to viewport if not scrolling down past last mini project
     // Allow autoscroll when scrolling upward (towards "mini projects") even if past last project
@@ -3988,10 +3988,10 @@ function PortfolioApp() {
         // Store the project card element and track if cursor is still over it
         // Find the card by matching the projectId with the className
         const projectCardClassMap = {
-          'animation-library': 'purple-project',
-          'data-viz': 'orange-project',
-          'mobile-app': 'teal-project',
-          'ai-chat': 'yellow-project'
+          'prism': 'purple-project',
+          'jarvis': 'orange-project',
+          'bloom-bakehouse': 'teal-project',
+          'conscious-living': 'yellow-project'
         };
         const projectCard = document.querySelector(`.mini-project-card.${projectCardClassMap[projectId] || ''}`);
         let isStillHovering = false;
@@ -4739,10 +4739,10 @@ function PortfolioApp() {
                 <div
                   onClick={() => {
                     trackProjectView('Prism', 'mini');
-                    openOverlay('animation-library');
+                    openOverlay('prism');
                   }}
-                  className={`mini-project-card purple-project ${hoveredMiniProject === 'animation-library' ? 'hovered' : ''}`}
-                  onMouseEnter={() => handleMiniProjectHover('animation-library')}
+                  className={`mini-project-card purple-project ${hoveredMiniProject === 'prism' ? 'hovered' : ''}`}
+                  onMouseEnter={() => handleMiniProjectHover('prism')}
                   onMouseLeave={() => {
                     // Don't clear hover state if we're transitioning or scrolling to a different project
                     if (isTransitioningRef.current || isScrollingToDifferentMiniProjectRef.current) return;
@@ -4768,10 +4768,10 @@ function PortfolioApp() {
                 <div
                   onClick={() => {
                     trackProjectView('JARVIS', 'mini');
-                    openOverlay('data-viz');
+                    openOverlay('jarvis');
                   }}
-                  className={`mini-project-card orange-project ${hoveredMiniProject === 'data-viz' ? 'hovered' : ''}`}
-                  onMouseEnter={() => handleMiniProjectHover('data-viz')}
+                  className={`mini-project-card orange-project ${hoveredMiniProject === 'jarvis' ? 'hovered' : ''}`}
+                  onMouseEnter={() => handleMiniProjectHover('jarvis')}
                   onMouseLeave={() => {
                     // Don't clear hover state if we're transitioning or scrolling to a different project
                     if (isTransitioningRef.current || isScrollingToDifferentMiniProjectRef.current) return;
@@ -4797,10 +4797,10 @@ function PortfolioApp() {
                 <div
                   onClick={() => {
                     trackProjectView('Bloom Bakehouse', 'mini');
-                    openOverlay('mobile-app');
+                    openOverlay('bloom-bakehouse');
                   }}
-                  className={`mini-project-card teal-project ${hoveredMiniProject === 'mobile-app' ? 'hovered' : ''}`}
-                  onMouseEnter={() => handleMiniProjectHover('mobile-app')}
+                  className={`mini-project-card teal-project ${hoveredMiniProject === 'bloom-bakehouse' ? 'hovered' : ''}`}
+                  onMouseEnter={() => handleMiniProjectHover('bloom-bakehouse')}
                   onMouseLeave={() => {
                     // Don't clear hover state if we're transitioning or scrolling to a different project
                     if (isTransitioningRef.current || isScrollingToDifferentMiniProjectRef.current) return;
@@ -4828,10 +4828,10 @@ function PortfolioApp() {
                 <div
                   onClick={() => {
                     trackProjectView('Conscious Living', 'mini');
-                    openOverlay('ai-chat');
+                    openOverlay('conscious-living');
                   }}
-                  className={`mini-project-card yellow-project ${hoveredMiniProject === 'ai-chat' ? 'hovered' : ''}`}
-                  onMouseEnter={() => handleMiniProjectHover('ai-chat')}
+                  className={`mini-project-card yellow-project ${hoveredMiniProject === 'conscious-living' ? 'hovered' : ''}`}
+                  onMouseEnter={() => handleMiniProjectHover('conscious-living')}
                   onMouseLeave={() => {
                     // Don't clear hover state if we're transitioning or scrolling to a different project
                     if (isTransitioningRef.current || isScrollingToDifferentMiniProjectRef.current) return;
@@ -4906,13 +4906,13 @@ function PortfolioApp() {
       {showPrismOverlay && (
         <div className="project-overlay" onClick={(e) => {
           if (e.target.classList.contains('project-overlay')) {
-            closeOverlay('animation-library');
+            closeOverlay('prism');
           }
         }}>
           <div className="project-overlay-content">
             <button 
               className="project-overlay-close"
-              onClick={() => closeOverlay('animation-library')}
+              onClick={() => closeOverlay('prism')}
               aria-label="Close overlay"
             >
               ×
@@ -4928,13 +4928,13 @@ function PortfolioApp() {
       {showDataVizOverlay && (
         <div className="project-overlay" onClick={(e) => {
           if (e.target.classList.contains('project-overlay')) {
-            closeOverlay('data-viz');
+            closeOverlay('jarvis');
           }
         }}>
           <div className="project-overlay-content">
             <button 
               className="project-overlay-close"
-              onClick={() => closeOverlay('data-viz')}
+              onClick={() => closeOverlay('jarvis')}
               aria-label="Close overlay"
             >
               ×
@@ -4949,13 +4949,13 @@ function PortfolioApp() {
       {showMobileAppOverlay && (
         <div className="project-overlay" onClick={(e) => {
           if (e.target.classList.contains('project-overlay')) {
-            closeOverlay('mobile-app');
+            closeOverlay('bloom-bakehouse');
           }
         }}>
           <div className="project-overlay-content">
             <button 
               className="project-overlay-close"
-              onClick={() => closeOverlay('mobile-app')}
+              onClick={() => closeOverlay('bloom-bakehouse')}
               aria-label="Close overlay"
             >
               ×
@@ -5012,13 +5012,13 @@ function PortfolioApp() {
       {showAIChatOverlay && (
         <div className="project-overlay" onClick={(e) => {
           if (e.target.classList.contains('project-overlay')) {
-            closeOverlay('ai-chat');
+            closeOverlay('conscious-living');
           }
         }}>
           <div className="project-overlay-content">
             <button 
               className="project-overlay-close"
-              onClick={() => closeOverlay('ai-chat')}
+              onClick={() => closeOverlay('conscious-living')}
               aria-label="Close overlay"
             >
               ×
