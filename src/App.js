@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useState, useEffect } from 'react';
+import React, { useLayoutEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -83,67 +83,17 @@ function AppRoutes() {
   );
 }
 
-// Mobile blocker component
-function MobileBlocker() {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      const width = window.innerWidth;
-      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-      setIsMobile(width < 1024 || isTouchDevice);
-    };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  if (!isMobile) return null;
-
-  return (
-    <div style={{
-      position: 'fixed',
-      bottom: '20px',
-      left: '20px',
-      fontFamily: 'Nohemi, sans-serif',
-      fontSize: '10vw',
-      color: '#111',
-      zIndex: 9999,
-      pointerEvents: 'none',
-      maxWidth: 'calc(100vw - 40px)',
-      lineHeight: '1.1'
-    }}>
-      For the cleanest experience, view this on a desktop
-    </div>
-  );
-}
-
-// Main App with simple routing
+// Main App with simple routing.
+// The portfolio is now fully responsive (mobile blur hero, stacked about,
+// touch swipe-snap projects), so it renders on every viewport — no more
+// desktop-only blocker.
 function App() {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      const width = window.innerWidth;
-      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-      setIsMobile(width < 1024 || isTouchDevice);
-    };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
   return (
     <ErrorBoundary>
-      <MobileBlocker />
-      {!isMobile && (
-        <BrowserRouter>
-          <ScrollReset />
-          <AppRoutes />
-        </BrowserRouter>
-      )}
+      <BrowserRouter>
+        <ScrollReset />
+        <AppRoutes />
+      </BrowserRouter>
     </ErrorBoundary>
   );
 }

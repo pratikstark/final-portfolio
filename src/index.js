@@ -12,7 +12,11 @@ try {
     track_pageview: true,
     persistence: "localStorage",
     autocapture: true,
-    record_sessions_percent: 100,
+    // Session replay records the DOM continuously. On a page that mutates every
+    // frame via GSAP that is a real main-thread tax and competes with the scroll
+    // animations, so sample a fraction of sessions instead of every one. Raise
+    // this if you specifically need fuller replay coverage.
+    record_sessions_percent: 10,
     ignore_dnt: true, // Ignore Do Not Track settings for development
   });
   

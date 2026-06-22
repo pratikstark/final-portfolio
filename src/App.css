@@ -237,7 +237,9 @@ body {
   height: 100vh;
   z-index: 1;
   box-sizing: border-box;
-  will-change: transform, width, height, top, left, clip-path;
+  /* Only promote the properties the GPU can actually accelerate. Listing layout
+     props (width/height/top/left) in will-change wastes memory and doesn't help. */
+  will-change: transform, clip-path;
   overflow: hidden;
   /* Prevent video from overflowing container */
   clip-path: inset(0% 0% 0% 0%);
@@ -250,6 +252,10 @@ body {
   object-fit: cover;
   max-width: 100%;
   box-sizing: border-box;
+  /* Push the playing video onto its own GPU layer so it composites cheaply while
+     the hero scrubs — keeps mobile scrolling smooth instead of repainting. */
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 /* Content text (below video banner) */
@@ -316,6 +322,8 @@ body {
   /* Font Families */
   --font-heading: 'Nohemi', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-body: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  /* Monospace for brutalist index labels / metadata captions */
+  --font-mono: ui-monospace, 'SFMono-Regular', 'SF Mono', 'Menlo', 'Consolas', 'Liberation Mono', monospace;
 
   /* Font Weights */
   --font-weight-light: 300;
@@ -763,6 +771,28 @@ body:has(.main-projects.dark-mode) .cursor-trail.magnetic-square {
   }
 }
 
+/* ---------------------------------------------------------------------------
+   Touch devices: there is no pointer to follow, so the floating dot/ring/label
+   are removed entirely (set via body.touch-device in JS). This is what kills the
+   "square stays stuck after I tap out" bug — the trail simply doesn't exist on
+   touch. Affordances live on the elements instead:
+   - the category arrows are shown at rest (web reveals them on hover only), so a
+     touch user can see the categories are tappable (accessibility); and
+   - the SELECTED category gets a solid square that clears the moment it's
+     deselected (driven by the .active class, removed on tap-out).
+--------------------------------------------------------------------------- */
+body.touch-device .custom-cursor,
+body.touch-device .cursor-trail,
+body.touch-device .cursor-label { display: none !important; }
+
+body.touch-device .about-title-line .arrow-close-widget { opacity: 1 !important; }
+
+body.touch-device .about-title-line.active {
+  outline: 2px solid #111;
+  outline-offset: clamp(6px, 1.6vw, 12px);
+}
+body.page-dark-mode.touch-device .about-title-line.active { outline-color: #fff; }
+
 /* Responsive Breakpoints */
 @media (max-width: 1024px) {
   .content-text {
@@ -813,6 +843,31 @@ body:has(.main-projects.dark-mode) .cursor-trail.magnetic-square {
   box-sizing: border-box;
   overflow: visible;
   /* Don't crop content */
+  /* Breathing room below the hero ("I'm Pratik") and above the work section.
+     vh-based so it scales with the viewport instead of crowding content on short
+     screens. The section is a flex column so .about-inner fills the padded box. */
+  padding-top: clamp(40px, 8vh, 104px);
+  padding-bottom: clamp(28px, 6vh, 72px);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Kill the faint hairline at the hero→about seam. The hero is pinned (transformed
+   to a fractional sub-pixel) and .content-text is its own compositing layer
+   (will-change: transform); their #f5f5f0 bottom edges anti-alias into a faint
+   line exactly where they meet this section. A 2px bar in the SAME background
+   colour, straddling the seam, hides it without shifting any layout. `inherit`
+   keeps it correct if .about ever flips to dark mode. */
+.about::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: inherit;
+  z-index: 2;
+  pointer-events: none;
 }
 
 .about-inner {
@@ -821,10 +876,10 @@ body:has(.main-projects.dark-mode) .cursor-trail.magnetic-square {
   margin-right: clamp(12px, 2.5vw, 32px);
   will-change: transform;
   box-sizing: border-box;
-  min-height: 80vh;
-  /* At least full viewport height */
-  height: auto;
-  /* Grow as needed when details expand */
+  flex: 1 1 auto;
+  /* Fill the padded section; min-height:0 lets it shrink, so it never forces
+     overflow into the next section on short viewports. */
+  min-height: 0;
   display: flex;
   /* Vertical distribution */
   flex-direction: column;
@@ -1342,6 +1397,27 @@ body:has(.main-projects.dark-mode) .cursor-trail.magnetic-square {
   box-sizing: border-box;
 }
 
+/* Keep the wordmarks (PSYCHOLOGY / DESIGN / CODE) inside their column. The line
+   is right-aligned with the arrow widget pinned at a fixed size; on narrow phones
+   the widest word ("PSYCHOLOGY") would otherwise spill past the viewport. Cap the
+   line at 100% and let ONLY the category SVG shrink — its viewBox + default
+   preserveAspectRatio scales the word down undistorted to fit the space left over
+   after the arrow. Scoped to .about-title so the contact icons are untouched. */
+.about-title .about-title-line { max-width: 100%; }
+.about-title .category-svg { min-width: 0; }
+.about-title .category-svg svg { max-width: 100%; }
+
+/* Height-aware sizing: cap the wordmarks by BOTH width and height (min() picks
+   the smaller) so the three lines + the copy blocks always fit a short viewport
+   — e.g. 682x705 or a landscape phone — with no overflow / no overlap into the
+   next section. Scoped to .about-title so contact and detail icons are untouched.
+   line-height:1 collapses the (text-less) flex line-box to the glyph height. */
+.about-title .about-title-line { font-size: clamp(38px, min(8vw, 11vh), 80px); line-height: 1; }
+.about-title .category-svg {
+  height: clamp(40px, min(8vw, 11vh), 80px);
+  max-height: clamp(40px, min(8vw, 11vh), 80px);
+}
+
 .category-svg .svg-stroke {
   fill: none;
   stroke: #111;
@@ -1594,17 +1670,10 @@ body.debug-mode::after {
     grid-template-columns: 1fr;
   }
 
-  .about-header {
-    justify-items: start;
-  }
-
-  .about-title {
-    text-align: left;
-  }
-
-  .about-title-line {
-    justify-content: flex-start;
-  }
+  /* Keep PSYCHOLOGY / DESIGN / CODE RIGHT-aligned at tablet/mobile too (matching
+     desktop and the brutalist intent). These used to flip the wordmarks to the
+     left here. The wordmark SVGs are max-width:100%, so they scale to fit and
+     never overflow when hugging the right edge — no need to left-align them. */
 
   .detail-content {
     width: 100%;
@@ -1810,6 +1879,44 @@ body.debug-mode::after {
 }
 
 /* Removed dash/bullet from list items */
+
+/* ===== Stage 4: brutalist focus composition (Work) ===== */
+
+/* Summary band gains brutalist grid rules in focus */
+.main-projects.dark-mode .work-summary {
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  padding-top: clamp(16px, 2.2vh, 28px);
+}
+
+/* Column divider only when the two summary columns sit side-by-side. The
+   stacked focus composition now runs through <=900px, so the divider must only
+   apply on the true desktop 2-column summary (>=901px) — otherwise it indents
+   LEARNINGS on tablet. */
+@media (min-width: 901px) {
+  .main-projects.dark-mode .work-summary-col + .work-summary-col {
+    border-left: 1px solid rgba(255, 255, 255, 0.12);
+    padding-left: clamp(20px, 3vw, 44px);
+  }
+}
+
+/* OUTCOMES / LEARNINGS — mono caption with project-accent tick */
+.main-projects.dark-mode .work-summary-title {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.main-projects.dark-mode .work-summary-title::before {
+  content: '';
+  width: 14px;
+  height: 2px;
+  background: var(--project-accent, #ffffff);
+  flex: 0 0 auto;
+}
 
 .projects-container {
   width: 100%;
@@ -2226,65 +2333,130 @@ body.debug-mode::after {
 
 /* No hover states - static layout only */
 
-/* Responsive adjustments */
+/* Work focus on touch / ≤900px — the layout breakpoint is aligned with the
+   focus breakpoint (isTouchOrNarrow = ≤900px) so scroll-driven focus and the
+   stacked composition always switch on together (no desktop-hover layout with
+   touch focus in the 769–900 gap). */
 @media (max-width: 900px) {
-  .work-summary {
-    gap: clamp(20px, 4vw, 32px);
+  /* Mobile/tablet focus = a type-first vertical composition that fits one viewport
+     with NO overlap: header → title + subtitle → thumbnail → outcomes / learnings.
+     The summary is taken out of absolute flow and given the remaining height. */
+  .main-projects {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    /* Center the whole composition in the viewport so it never hugs the top with
+       dead space at the bottom (needs the summary to be flex:0 0 auto, below). */
+    padding: clamp(34px, 5.5vh, 52px) clamp(14px, 4vw, 22px) clamp(16px, 2.6vh, 26px);
+    gap: clamp(10px, 1.8vh, 20px);
   }
-}
 
-@media (max-width: 768px) {
+  .main-projects-header {
+    position: static;
+    order: 0;
+    flex: 0 0 auto;
+  }
+
   .main-projects-title {
     font-size: var(--text-4xl);
   }
 
-  .work-summary {
-    top: clamp(120px, 16vh, 180px);
-    grid-template-columns: 1fr;
-    gap: clamp(16px, 3vw, 24px);
-    width: auto;
-  }
-
-  .work-summary-title {
-    font-size: var(--text-xs);
-    margin-bottom: clamp(6px, 1.5vw, 10px);
-  }
-
-  .work-summary-list {
-    gap: clamp(4px, 1vw, 8px);
-  }
-
-  .work-summary-list li {
-    font-size: var(--text-xs);
-    padding-left: clamp(14px, 2vw, 18px);
+  /* Project card region — centered thumbnail + title + subtitle */
+  .projects-container {
+    order: 1;
+    flex: 0 0 auto;
+    height: auto;
+    align-items: center;
+    justify-content: center;
   }
 
   .projects-track {
-    gap: clamp(20px, 5vw, 40px);
+    padding: 0;
+    height: auto;
   }
 
+  .project-card,
+  .project-card-link {
+    align-items: center;
+  }
+
+  .project-card {
+    text-align: center;
+  }
+
+  /* Type-first composition: title + subtitle lead, thumbnail sits BELOW them
+     (order:1) so the image is no longer jammed at the very top. */
   .project-rectangle {
-    width: clamp(200px, 60vw, 300px);
-    height: clamp(150px, 18vh, 250px);
+    order: 1;
+    width: clamp(150px, 44vw, 188px);
+    height: clamp(86px, 13vh, 120px);
+    margin-top: clamp(10px, 1.8vh, 18px);
   }
 
   .project-info {
-    margin-top: 4px;
-    /* Reduced spacing on mobile */
+    order: 0;
+    margin-top: 0;
+    padding-right: 0;
+    align-items: center;
+    text-align: center;
+    max-width: min(82vw, 360px);
+    gap: clamp(3px, 0.8vh, 6px);
   }
 
   .project-title {
-    font-size: 14px;
-    /* Smaller on mobile */
+    font-size: clamp(16px, 2.2vh, 20px);
     font-weight: 500;
-    /* Lighter on mobile */
   }
 
   .project-subtitle {
-    font-size: 12px;
-    /* Smaller on mobile */
+    font-size: clamp(11px, 1.5vh, 13px);
+    max-width: min(80vw, 340px);
   }
 
+  /* The whole .project-card is tappable (onClick → openOverlay). The floating
+     absolute arrow (right:0) read "too wide" beside centered text — drop it on mobile. */
+  .project-arrow {
+    display: none;
+  }
+
+  /* Outcomes / Learnings — fills remaining height, fluid so it fits short phones */
+  .work-summary {
+    position: static;
+    order: 2;
+    flex: 0 0 auto;
+    /* natural height so .main-projects can center the whole stack (not grow to fill) */
+    min-height: 0;
+    top: auto;
+    left: auto;
+    right: auto;
+    width: 100%;
+    grid-template-columns: 1fr;
+    gap: clamp(8px, 1.4vh, 16px);
+    transform: none;
+    align-content: start;
+  }
+
+  .work-summary-title {
+    font-size: clamp(9px, 1.2vh, 11px);
+    margin-bottom: clamp(3px, 0.7vh, 7px);
+  }
+
+  .work-summary-list {
+    gap: clamp(2px, 0.6vh, 6px);
+  }
+
+  .work-summary-list li {
+    font-size: clamp(10px, 1.35vh, 13px);
+    line-height: 1.32;
+    padding-left: 0;
+  }
+
+  .main-projects.dark-mode .work-summary {
+    padding-top: clamp(10px, 1.6vh, 18px);
+  }
+
+  /* legacy hover-content (unused in the current focus model) */
   .project-hover-content {
     flex-direction: column;
     gap: clamp(15px, 3vh, 25px);
@@ -2523,6 +2695,23 @@ body.debug-mode::after {
   will-change: transform, opacity;
 }
 
+/* WEB (hover devices, > 900px): focus is hover-driven, so projects are NOT
+   dimmed-by-centered before you interact — every card stays full opacity AND
+   hoverable, so the magnetic cursor can wrap any of them (not just the centered
+   one). Hovering a card engages dark mode, where the dark-mode rules above take
+   over (focus the hovered card, recede the rest). On touch / ≤900px the
+   centered-dimming stays (focus is on by default there, for accessibility).
+   The :not(.dark-mode) + full ancestor chain keeps this more specific than the
+   dimming rules it overrides. */
+@media (min-width: 901px) and (hover: hover) {
+  .main-projects:not(.dark-mode) .projects-container .projects-track .projects-wrapper:has(.project-card.centered) .project-card:not(.centered),
+  .mini-projects-viewport-container:not(.dark-mode) .mini-projects-track .mini-projects-wrapper:has(.mini-project-card.centered) .mini-project-card:not(.centered) {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    transform: translateY(0) scale(1) !important;
+  }
+}
+
 .mini-project-rectangle {
   width: 200px;
   /* 50% smaller - 200px */
@@ -2625,45 +2814,78 @@ body.debug-mode::after {
 }
 
 /* Responsive Design for Mini Projects */
-@media (max-width: 768px) {
+/* Mini focus on touch / ≤900px — aligned with the focus breakpoint (like Work):
+   a fit-to-viewport stack. The dark focus stage fills the space between the
+   header and the bottom gutter (no empty gap, nothing below the fold), and the
+   centered card's description flows inline and is ON by default (scroll-driven
+   focus, no hover needed). */
+@media (max-width: 900px) {
   .mini-projects-header {
-    padding: 20px 1rem;
+    padding: clamp(26px, 4.6vh, 44px) clamp(14px, 4vw, 22px) clamp(4px, 1.2vh, 12px);
   }
 
+  /* Smaller so "THINGS I DO WHEN" / "I CANT SIT STILL" both stay on one line
+     and never clip at 320–430px wide. */
   .mini-projects-title {
-    font-size: var(--text-4xl);
+    font-size: clamp(18px, 5.3vw, 32px);
+    line-height: 1.08;
   }
 
   .mini-projects-viewport-container {
-    left: clamp(12px, 2.5vw, 32px);
-    right: clamp(12px, 2.5vw, 32px);
-    bottom: clamp(12px, 2.5vw, 32px);
-    height: 60vh;
+    left: clamp(12px, 4vw, 22px);
+    right: clamp(12px, 4vw, 22px);
+    top: 0;
+    bottom: clamp(12px, 2.4vh, 22px);
+    height: auto;
+    min-height: 0;
+    max-height: none;
     width: auto;
     margin: 0;
   }
 
+  /* Drop the desktop -30px lift so the card group centers in the tall stage. */
+  .mini-projects-track {
+    transform: none;
+  }
+
   .mini-projects-wrapper {
     gap: 20px;
-    /* Even closer on mobile */
-    padding: 0 50px;
+    padding: 0 clamp(20px, 8vw, 44px);
   }
 
   .mini-project-rectangle {
-    width: clamp(150px, 40vw, 200px);
-    height: clamp(150px, 40vw, 200px);
-    /* Keep 1:1 aspect ratio on mobile */
+    width: clamp(112px, 30vw, 150px);
+    height: clamp(112px, 30vw, 150px);
   }
 
   .mini-project-info {
-    max-width: clamp(150px, 40vw, 200px);
+    max-width: min(86vw, 420px);
+    margin-top: clamp(8px, 1.4vh, 14px);
   }
 
-  .mini-project-body {
-    font-size: 14px;
-    width: clamp(280px, 85vw, 650px);
-    max-height: 120px;
-    margin-top: 10px;
+  /* Description flows INLINE under the logo/title (not absolute → not below the
+     fold) and is shown for the focused .centered card on touch. */
+  .mini-project-card .mini-project-body {
+    position: static;
+    transform: none;
+    left: auto;
+    width: min(86vw, 420px);
+    max-width: 86vw;
+    margin: clamp(8px, 1.4vh, 14px) auto 0;
+    font-size: clamp(12px, 1.6vh, 14px);
+    line-height: 1.5;
+  }
+
+  .mini-projects-wrapper .mini-project-card.centered .mini-project-body {
+    opacity: 1;
+    max-height: clamp(150px, 28vh, 230px);
+    pointer-events: auto;
+  }
+
+  .mini-projects-wrapper .mini-project-card:not(.centered) .mini-project-body {
+    opacity: 0;
+    max-height: 0;
+    margin-top: 0;
   }
 }
 
@@ -2938,12 +3160,22 @@ body.debug-mode::after {
     justify-items: start;
   }
 
-  .contact-options-title {
-    text-align: left;
+  /* The contact options are <img> word-marks (EMAIL ME / SCHEDULE CALL / LEAVE A
+     MESSAGE) sized by .category-svg height with width:auto — so the longer labels
+     spilled off the left edge on phones. Cap their height on mobile so the WIDEST
+     word fits, and cap the row at 100% so nothing can overflow. Rows stay
+     right-aligned with the arrow pinned at the edge (matches the About section). */
+  .marquee-contact-section .contact-options-title .about-title-line {
+    max-width: 100%;
   }
 
-  .contact-option-line {
-    justify-content: flex-start;
+  /* Cap by HEIGHT only — the <img> word-marks are width:auto, so a smaller height
+     shrinks the width proportionally (undistorted) until the widest fits. Do NOT
+     cap the img max-width: the flex .category-svg computes ~0 width, so max-width
+     would collapse the word-mark to nothing (leaving only the arrow). */
+  .marquee-contact-section .contact-options-title .category-svg {
+    height: clamp(22px, 6.6vw, 36px);
+    max-height: clamp(22px, 6.6vw, 36px);
   }
 
   .marquee-text {
@@ -3134,5 +3366,103 @@ body.debug-mode::after {
     width: 36px;
     height: 36px;
     font-size: 24px;
+  }
+}
+/* ============================================================================
+   STAGE 2 — Hero: desktop cover video + scroll cue; portrait = letterbox stack
+   on black; landscape (incl. phones) = full-bleed cover; rotate → FS + sound.
+   ============================================================================ */
+
+/* Desktop scroll cue: brutalist label at the bottom of the hero, fades on scroll. */
+.hero-scroll-cue {
+  position: absolute;
+  left: 50%;
+  bottom: clamp(18px, 3vh, 36px);
+  transform: translateX(-50%);
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: #111;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  pointer-events: none;
+  mix-blend-mode: difference;
+  color: #fff; /* difference vs video */
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.hero-scroll-cue__arrow {
+  font-size: 16px;
+  letter-spacing: 0;
+  animation: heroCueBounce 1.8s ease-in-out infinite;
+}
+@keyframes heroCueBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(5px); }
+}
+body.is-scrolled .hero-scroll-cue {
+  opacity: 0;
+  transform: translateX(-50%) translateY(8px);
+}
+
+/* Mobile rotate cue is desktop-hidden. */
+.hero-rotate-cue { display: none; }
+
+/* ---- Portrait phones/tablets: the SAME scrubbed hero animation as desktop
+   (shrink-to-banner -> intro reveal -> wipe-up, all driven by JS). The only
+   difference is the video is letterboxed on solid black so nothing is cropped,
+   and a rotate/unmute cue replaces the desktop SCROLL label. ---- */
+@media (orientation: portrait) {
+  /* The hero KEEPS its light base background (#f5f5f0). Only the video-container
+     is black — that is what paints the letterbox bars in the full-bleed state.
+     Because the hero behind it is light, the shrink shows a clean light border
+     and the wipe-up reveals light, so the whole black block visibly wipes away
+     (not just the inner video) — exactly like the desktop behaviour. */
+
+  /* Letterbox: whole landscape frame visible, black bars fill the rest. */
+  .video-container { background: #000; }
+  .video-container video { object-fit: contain !important; }
+
+  /* Unmute to the top-right over the video. */
+  .audio-control-button {
+    top: clamp(10px, 3vw, 16px) !important;
+    right: clamp(10px, 3vw, 16px) !important;
+    bottom: auto !important;
+  }
+
+  /* Rotate/unmute cue instead of the desktop SCROLL label; both fade on scroll. */
+  .hero-scroll-cue { display: none; }
+
+  .hero-rotate-cue {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    position: absolute;
+    left: 50%;
+    bottom: clamp(18px, 3vh, 36px);
+    transform: translateX(-50%);
+    z-index: 7;
+    max-width: calc(100% - 28px);
+    padding: 9px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    font-family: var(--font-body);
+    font-size: clamp(11px, 3.2vw, 13px);
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 0; /* brutalist hard edge */
+  }
+  .hero-rotate-cue svg { flex-shrink: 0; }
+
+  body.is-scrolled .hero-rotate-cue {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
   }
 }

@@ -5,6 +5,7 @@ import { gsap } from 'gsap';
 import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ScrollSmoother } from 'gsap/ScrollSmoother';
+import Lenis from 'lenis';
 import mixpanel from 'mixpanel-browser';
 import './App.css';
 import AnimationLibraryProject from './pages/AnimationLibraryProject';
@@ -21,6 +22,12 @@ import closeSvg from './assets/close.svg';
 
 // Global debug state
 let globalDebugMode = false;
+
+// True on touch devices / narrow viewports — used to give mobile its own hero
+// treatment (no desktop pin/shrink) and other touch-appropriate behaviour.
+const isTouchOrNarrow = () =>
+  typeof window !== 'undefined' &&
+  window.matchMedia('(max-width: 900px), (hover: none) and (pointer: coarse)').matches;
 
 // Store original console methods
 
@@ -597,6 +604,8 @@ function PortfolioApp() {
   const isScrollingUpwardRef = useRef(false);
   const previousHoveredProjectRef = useRef(null);
   const previousHoveredMiniProjectRef = useRef(null);
+  const activeProjectIdRef = useRef(null);
+  const activeMiniProjectIdRef = useRef(null);
   const isTransitioningRef = useRef(false);
   const hasTriggeredTransitionRef = useRef(false);
   const hasTriggeredMiniTransitionRef = useRef(false);
@@ -608,6 +617,9 @@ function PortfolioApp() {
   const aboutTitleRef = useRef(null);
   const aboutDetailRef = useRef(null);
   const activeSectionRef = useRef(null);
+  // Homepage scroll position captured when a project overlay opens, so closing it
+  // returns the user to the exact spot they left from.
+  const overlayScrollRef = useRef(0);
   const lastSignificantScrollYRef = useRef(0);
   const [isMuted, setIsMuted] = useState(true);
   const [showAudioPrompt, setShowAudioPrompt] = useState(true);
@@ -635,6 +647,168 @@ function PortfolioApp() {
     }
     setShowAudioPrompt(false);
   };
+
+  // Mobile hero affordance: unmute + push the video into native fullscreen
+  // (rotating the phone there fills the screen with sound).
+  const handleMobileImmerse = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    setIsMuted(false);
+    v.muted = false;
+    v.play().catch(() => {});
+    const req = v.requestFullscreen || v.webkitEnterFullscreen ||
+                v.webkitRequestFullscreen || v.msRequestFullscreen;
+    try { if (req) req.call(v); } catch (e) { /* fullscreen may be blocked */ }
+  };
+
+  // Rotating a phone into landscape is the immersive moment: auto-attempt native
+  // fullscreen + sound. Best-effort — some browsers require a tap, so the rotate
+  // cue stays as a fallback, and the CSS already fills the screen in landscape
+  // regardless. Rotating back to portrait exits fullscreen.
+  useEffect(() => {
+    if (!isTouchOrNarrow()) return undefined;
+    const mq = window.matchMedia('(orientation: landscape)');
+    const enterImmersive = () => {
+      const v = videoRef.current;
+      if (!v) return;
+      setIsMuted(false);
+      v.muted = false;
+      v.play().catch(() => {});
+      const req = v.requestFullscreen || v.webkitEnterFullscreen ||
+                  v.webkitRequestFullscreen || v.msRequestFullscreen;
+      try { if (req) req.call(v); } catch (e) { /* gesture may be required */ }
+    };
+    const exitImmersive = () => {
+      const v = videoRef.current;
+      // iOS plays video fullscreen on the ELEMENT (not the document), so it has to
+      // be closed on the element — do this first so rotating back exits cleanly.
+      if (v && v.webkitDisplayingFullscreen && typeof v.webkitExitFullscreen === 'function') {
+        try { v.webkitExitFullscreen(); } catch (e) { /* ignore */ }
+      }
+      // Standard / webkit document fullscreen.
+      const ex = document.exitFullscreen || document.webkitExitFullscreen;
+      try {
+        if (ex && (document.fullscreenElement || document.webkitFullscreenElement)) {
+          ex.call(document);
+        }
+      } catch (e) { /* ignore */ }
+      // Back in portrait we're the quiet letterbox again — re-mute so nothing keeps
+      // playing sound behind the scroll, and the Unmute control re-appears.
+      if (v) v.muted = true;
+      setIsMuted(true);
+    };
+    const onChange = (e) => { if (e.matches) enterImmersive(); else exitImmersive(); };
+    if (mq.addEventListener) mq.addEventListener('change', onChange);
+    else mq.addListener(onChange);
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener('change', onChange);
+      else mq.removeListener(onChange);
+    };
+  }, []);
+
+  // ---------------------------------------------------------------------------
+  // Smooth scroll — Lenis is the SINGLE source of truth for scroll position.
+  // Everything else only reads scroll; nothing else writes it. Snapping to a
+  // project happens here on scroll-end (via Lenis) so it shares one easing and
+  // never fights the user's input. This replaces ScrollTrigger's native snap,
+  // the magnetic auto-scroll, the hover gsap.to(window) jumps and contact locks.
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const lenis = new Lenis({
+      duration: 1.1,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // expo.out
+      smoothWheel: !reduce,
+      gestureOrientation: 'vertical',
+      touchMultiplier: 1.5,
+      wheelMultiplier: 1,
+      // Let any open project overlay scroll natively. Lenis preventDefaults wheel
+      // globally (even while .stop()'d), so without this the inner case-study
+      // pages can't scroll. data-lenis-prevent semantics, but for every overlay.
+      prevent: (node) => !!(node && node.closest && node.closest('.project-overlay')),
+    });
+    window.__lenis = lenis;
+
+    const raf = (time) => lenis.raf(time * 1000);
+    gsap.ticker.add(raf);
+    gsap.ticker.lagSmoothing(0);
+    lenis.on('scroll', ScrollTrigger.update);
+
+    // Snap to the nearest project on scroll-end. One writer (Lenis), shared easing.
+    const snapCfg = [
+      { id: 'projects-scroll', points: [0, 0.5, 1] },
+      { id: 'mini-projects-scroll', points: [0, 1 / 3, 2 / 3, 1] },
+    ];
+    let snapT = null, snapping = false, safety = null;
+    // Keep a snap that lands on the FIRST/LAST card a few px INSIDE the pin range.
+    // Landing exactly on st.start / st.end sits on the pin boundary, where the
+    // trigger's onLeave/onLeaveBack fire and clear the focus — that's the
+    // "scroll to project 1 → it snaps to zero and focus turns off" bug. The inset
+    // keeps the rested card safely inside its focused range.
+    const EDGE = 12;
+    const trySnap = () => {
+      if (snapping || reduce) return;
+      const y = lenis.scroll;
+      for (const { id, points } of snapCfg) {
+        const st = ScrollTrigger.getById(id);
+        if (!st || st.end <= st.start) continue;
+        if (y < st.start - 1 || y > st.end + 1) continue;
+        const p = (y - st.start) / (st.end - st.start);
+        const np = points.reduce((a, b) => (Math.abs(b - p) < Math.abs(a - p) ? b : a));
+        let target = st.start + np * (st.end - st.start);
+        const edge = (st.end - st.start) > 4 * EDGE ? EDGE : 0;
+        target = Math.min(st.end - edge, Math.max(st.start + edge, target));
+        if (Math.abs(target - y) > 2) {
+          snapping = true;
+          lenis.scrollTo(target, {
+            duration: 0.42, // snappier magnetic pull between projects
+            easing: (t) => 1 - Math.pow(1 - t, 3),
+            onComplete: () => { snapping = false; },
+          });
+          if (safety) clearTimeout(safety);
+          safety = setTimeout(() => { snapping = false; }, 700);
+        }
+        return;
+      }
+    };
+    const onScroll = () => {
+      // Fade the hero scroll cue once the user moves off the very top.
+      document.body.classList.toggle('is-scrolled', lenis.scroll > 24);
+      if (snapping) return;
+      if (snapT) clearTimeout(snapT);
+      snapT = setTimeout(trySnap, 100);
+    };
+    lenis.on('scroll', onScroll);
+
+    let rt = null;
+    let lastW = window.innerWidth;
+    const onResize = () => {
+      // On phones, showing/hiding the browser URL bar fires `resize` with only a
+      // HEIGHT change. Refreshing ScrollTrigger on each one yanks the pinned hero
+      // mid-scroll (the "laggy" feel). Only refresh when the WIDTH actually changes
+      // (covers genuine resizes and portrait<->landscape, since those swap w/h).
+      if (window.innerWidth === lastW) return;
+      lastW = window.innerWidth;
+      if (rt) clearTimeout(rt);
+      rt = setTimeout(() => ScrollTrigger.refresh(), 150);
+    };
+    window.addEventListener('resize', onResize);
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => ScrollTrigger.refresh());
+    }
+
+    return () => {
+      window.removeEventListener('resize', onResize);
+      if (snapT) clearTimeout(snapT);
+      if (safety) clearTimeout(safety);
+      if (rt) clearTimeout(rt);
+      gsap.ticker.remove(raf);
+      lenis.off('scroll', ScrollTrigger.update);
+      lenis.off('scroll', onScroll);
+      lenis.destroy();
+      delete window.__lenis;
+    };
+  }, []);
 
   // Preload project images for smooth hover transitions
   useEffect(() => {
@@ -724,13 +898,18 @@ function PortfolioApp() {
   }, []);
   
   useEffect(() => {
+    const lenis = window.__lenis;
     if (anyOverlayOpen) {
       // Clear hover states when overlay opens
       setHoveredProject(null);
       setHoveredMiniProject(null);
       setShowMiniAurora(false);
-      
-      // Lock body scroll
+
+      // Remember exactly where the homepage was, then freeze the background so the
+      // overlay's own scroll container takes over. Lenis is the scroll writer, so
+      // read/stop it (not window.scrollY) to restore the precise spot on close.
+      overlayScrollRef.current = lenis ? lenis.scroll : (window.scrollY || 0);
+      if (lenis) lenis.stop();
       const originalOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
 
@@ -745,13 +924,16 @@ function PortfolioApp() {
       return () => {
         document.body.style.overflow = originalOverflow;
         window.removeEventListener('keydown', handleEscape);
-      };
-    } else {
-      // When overlay closes, refresh ScrollTriggers to restore main page functionality
-      // Use a small delay to ensure overlay is fully unmounted
-      setTimeout(() => {
+        // Resume smooth scroll and snap the homepage back to the exact position the
+        // user left from (refresh first so pinned offsets are current, then restore).
         ScrollTrigger.refresh();
-      }, 100);
+        if (lenis) {
+          lenis.start();
+          lenis.scrollTo(overlayScrollRef.current, { immediate: true });
+        } else {
+          window.scrollTo(0, overlayScrollRef.current);
+        }
+      };
     }
   }, [anyOverlayOpen]);
 
@@ -931,6 +1113,12 @@ function PortfolioApp() {
       }
     }, 100);
 
+    // Hero: the scrubbed full-screen-video -> framed-banner shrink that reveals
+    // the intro and then wipes the video up. This now runs on EVERY device so the
+    // feel is identical on mobile/tablet; in portrait the video is letterboxed on
+    // black (CSS) so nothing is cropped. Rotating a phone still triggers native
+    // OS-fullscreen + sound via the orientation listener above.
+    {
     // Set initial fullscreen state for video container
     if (videoContainerRef.current) {
       gsap.set(videoContainerRef.current, {
@@ -1047,34 +1235,38 @@ function PortfolioApp() {
       ease: 'power2.in',
       duration: 0.4
     }, 0.4);
+    // Fade the container out over the SAME window the clip-wipe finishes in
+    // (0.7→0.8), so the last clipped sliver of the (black, letterboxed) banner is
+    // already invisible — no faint line left at the hero→about seam. autoAlpha
+    // reverses cleanly when scrubbing back up.
+    heroTl.to(videoContainerRef.current, { autoAlpha: 0, duration: 0.1, ease: 'power1.in' }, 0.7);
+    }
 
-    // About section parallax scrolling - subtle effect, no text cutoff
+    // About section parallax — a subtle, BOUNDED rise on desktop only.
+    // The old version translated .about-inner by a FULL viewport height and, being
+    // created once, left that transform applied when the viewport later crossed
+    // below 900px (rotate / resize / DevTools) — shoving the content ~½vh down so
+    // it overlapped the next section (the "layout breaks at 682x705" report).
+    // Now the from-value is a function that returns 0 on touch/narrow, and is
+    // re-applied on every refresh, so crossing the boundary self-clears the
+    // transform. Bounded to ≤64px and resolved by the time the section reaches
+    // centre, so it can never overlap a neighbour at any size.
     const aboutInner = document.querySelector('.about-inner');
     const aboutSection = document.querySelector('.about');
     if (aboutInner && aboutSection) {
+      const aboutFromY = () => (isTouchOrNarrow() ? 0 : Math.min(window.innerHeight * 0.08, 64));
       gsap.fromTo(aboutInner,
+        { y: aboutFromY },
         {
-          y: () => window.innerHeight * 1 // Start half viewport height below for subtle parallax
-        },
-        {
-          y: 0, // End at natural position
+          y: 0,
           ease: 'none',
           scrollTrigger: {
             trigger: aboutSection,
             start: 'top bottom',
-            end: 'top top', // Complete animation when section reaches top
-            scrub: 0.5,
-            markers: debugMode ? {
-              startColor: "purple",
-              endColor: "purple",
-              indent: 200,
-              fontSize: "12px"
-            } : false,
+            end: 'top center', // resolve to natural position before nearing the work section
+            scrub: 0.6,
             invalidateOnRefresh: true,
-            onRefresh: (self) => {
-              // Recalculate start position on resize
-              gsap.set(aboutInner, { y: window.innerHeight * 0.5 });
-            }
+            onRefresh: () => { gsap.set(aboutInner, { y: aboutFromY() }); },
           }
         }
       );
@@ -1174,29 +1366,40 @@ function PortfolioApp() {
     // Refresh ScrollTrigger to prevent jittery behavior
     ScrollTrigger.refresh();
 
-    // Uniform DrawSVG animation for all about section elements
-    ScrollTrigger.create({
-      trigger: '.about',
-      start: 'top 70%',
-      end: 'bottom 30%',
-      scrub: 1, // Smooth scrubbing tied to scroll
-      onUpdate: (self) => {
-        const progress = self.progress;
-        const allDrawMeElements = document.querySelectorAll('.about .draw-me');
-
-        allDrawMeElements.forEach((element, index) => {
-          if (gsap.plugins.drawSVG) {
-            // Smooth draw progress based on scroll
-            const drawProgress = Math.max(0, Math.min(1, progress * 2 - index * 0.1));
-            gsap.set(element, { drawSVG: `${drawProgress * 100}%` });
-          } else {
-            // Fallback opacity animation
-            const opacity = Math.max(0, Math.min(1, progress * 2 - index * 0.1));
-            gsap.set(element, { opacity: opacity });
-          }
-        });
-      }
-    });
+    // About wordmark draw-in (PSYCHOLOGY / DESIGN / CODE). A scrubbed TIMELINE of
+    // per-line drawSVG tweens — not a manual onUpdate gsap.set — so each line draws
+    // with eased inertia instead of a 1:1 (choppy) map of scroll→progress.
+    // Triggered off `.about-title` (the lines themselves), NOT `.about`: the section
+    // has a tall top padding, so a `.about` trigger meant the whole draw played out
+    // while the words were still in the BOTTOM HALF of the screen ("way too low on
+    // web") and only finished at center. Anchoring to the title makes it viewport-
+    // consistent — the words draw as they enter from the bottom and are fully drawn
+    // by the time they reach the upper third. scrub 1.2 keeps the smoothing/lag.
+    const drawEls = gsap.utils.toArray('.about .draw-me');
+    if (drawEls.length) {
+      const drawTl = gsap.timeline({
+        scrollTrigger: {
+          trigger: '.about-title',
+          start: 'top 90%',
+          end: 'top 30%',
+          scrub: 1.2,
+          invalidateOnRefresh: true,
+        },
+      });
+      drawEls.forEach((el, i) => {
+        if (gsap.plugins.drawSVG) {
+          drawTl.fromTo(el, { drawSVG: '0%' }, { drawSVG: '100%', ease: 'power1.inOut', duration: 1 }, i * 0.22);
+        } else {
+          // No premium DrawSVGPlugin here — draw the stroke with the native dash
+          // offset so the word genuinely "writes on" (smooth, eased) rather than
+          // just fading in. getTotalLength gives the exact dash length per path.
+          let len = 1000;
+          try { len = el.getTotalLength() || 1000; } catch (e) { /* keep fallback */ }
+          gsap.set(el, { strokeDasharray: len, strokeDashoffset: len, opacity: 1 });
+          drawTl.fromTo(el, { strokeDashoffset: len }, { strokeDashoffset: 0, ease: 'power1.inOut', duration: 1 }, i * 0.22);
+        }
+      });
+    }
 
     // Enhanced hover-to-scroll transition function for main projects
     const handleHoverToScrollTransition = (fromProjectIndex, toProjectIndex, cards, projectsSection, lightRaysWrapper, workSummary) => {
@@ -1398,472 +1601,77 @@ function PortfolioApp() {
       };
 
       const applyScrollLogic = () => {
-        // Re-check elements exist before proceeding
-        const currentProjectsSection = document.querySelector('.main-projects');
-        const currentProjectsWrapper = document.querySelector('.projects-wrapper');
-        const currentCards = Array.from(document.querySelectorAll('.project-card'));
-        
-        if (!currentProjectsSection || !currentProjectsWrapper || currentCards.length < 3) {
-          return;
-        }
+        const section = document.querySelector('.main-projects');
+        const wrapper = document.querySelector('.projects-wrapper');
+        const cards = Array.from(document.querySelectorAll('.project-card'));
+        if (!section || !wrapper || cards.length < 3) return;
 
-        const cardPositions = [
-          measureRequiredX(0), // First card centered
-          measureRequiredX(1), // Second card centered  
-          measureRequiredX(2)  // Third card centered
-        ];
+        // Idempotent: clear any prior triggers for this section.
+        ScrollTrigger.getAll().forEach((t) => {
+          if (t.vars && (t.vars.id === 'projects-scroll' || t.vars.id === 'projects-entry' || t.vars.id === 'projects-exit')) t.kill();
+        });
 
-        // Compute a rightmost starting position for the first card
-        const measureRightmostX = (cardIndex) => {
-          const target = cards[cardIndex];
-          if (!target) return cardPositions[0];
-          const prevTransform = projectsWrapper.style.transform;
-          projectsWrapper.style.transform = 'none';
-          const targetRect = target.getBoundingClientRect();
-          // Shift so the card's left edge aligns with the viewport right edge (just offscreen)
-          const rightmostX = (window.innerWidth - targetRect.left) + 20; // +20px bias offscreen
-          projectsWrapper.style.transform = prevTransform;
-          return rightmostX;
+        let startX = measureRequiredX(0);
+        let endX = measureRequiredX(cards.length - 1);
+
+        gsap.set(cards, { clearProps: 'transform,scale,filter', opacity: 1 });
+        gsap.set(wrapper, { x: startX });
+
+        const ids = ['cognixa', 'settlin', 'project3'];
+        let lastIdx = -1;
+        const setActive = (idx) => {
+          const clamped = Math.max(0, Math.min(cards.length - 1, idx));
+          if (clamped === lastIdx) return;
+          lastIdx = clamped;
+          cards.forEach((c, i) => c.classList.toggle('centered', i === clamped));
+          const id = ids[clamped];
+          // Focus (dark mode + Outcomes/Learnings) is scroll-driven & default-on
+          // ONLY on touch (no hover available, for accessibility). On web it's
+          // hover-driven, so scrolling never forces "hover mode on by default" —
+          // and changing the centered card while scrolling clears any hover focus
+          // so it can't stick to a card you've scrolled past.
+          if (isTouchOrNarrow()) {
+            setHoveredProject((prev) => (prev === id ? prev : id));
+          } else {
+            setHoveredProject(null);
+          }
+        };
+        const clearActive = () => {
+          lastIdx = -1;
+          cards.forEach((c) => c.classList.remove('centered'));
+          setHoveredProject(null);
+          setIsMainProjectsInView(false);
         };
 
-        const entryStartX = measureRightmostX(0);
-        const measureLeftmostX = (cardIndex) => {
-          const target = cards[cardIndex];
-          if (!target) return cardPositions[cardIndex] || 0;
-          const prevTransform = projectsWrapper.style.transform;
-          projectsWrapper.style.transform = 'none';
-          const targetRect = target.getBoundingClientRect();
-          // Shift so the card's right edge aligns with the viewport left edge (slightly offscreen)
-          const leftmostX = -(targetRect.right) - 20; // -20px bias offscreen
-          projectsWrapper.style.transform = prevTransform;
-          return leftmostX;
-        };
-        const exitEndX = measureLeftmostX(2);
-
-        // Start with the first project off to the right; it will slide in during entry
-        gsap.set(projectsWrapper, { x: entryStartX });
-
-        // Kill previous triggers for idempotency
-        ScrollTrigger.getAll().forEach(t => {
-          if (t.vars && (t.vars.id === 'projects-scroll' || t.vars.id === 'projects-entry' || t.vars.id === 'projects-exit' || t.vars.id?.includes('project-'))) {
-            t.kill();
-          }
-        });
-
-        // Initialize all cards as visible with same scale - no blur effects
-        gsap.set(cards, {
-          opacity: 1,
-          scale: 1,
-          filter: 'blur(0px)'
-        });
-
-        // Entry interaction: as the section scrolls into view, slide first project from rightmost to centered
-        if (!currentProjectsSection || !currentProjectsSection.isConnected) return;
-        ScrollTrigger.create({
-          id: 'projects-entry',
-          trigger: currentProjectsSection,
-          start: 'top bottom',   // section top hits bottom of viewport
-          end: 'top top',        // section top reaches top (pin start)
-          scrub: 0.5,            // Match vertical scroll sensitivity for smooth transition
-          anticipatePin: 1,
-          markers: debugMode ? {
-            startColor: 'blue',
-            endColor: 'blue',
-            indent: 50,
-            fontSize: '10px'
-          } : false,
-          onUpdate: (self) => {
-            const p = self.progress; // 0 -> 1
-            // Apply easing curve for smoother transition
-            const easeFunc = gsap.parseEase("power2.out");
-            const easedProgress = easeFunc(p);
-            const x = gsap.utils.interpolate(entryStartX, cardPositions[0], easedProgress);
-            gsap.set(projectsWrapper, { x });
-            // Keep first card prominent during entry
-            cards.forEach((card, index) => {
-              gsap.to(card, { opacity: index === 0 ? 1 : 0.3, duration: 0.3 });
-            });
-          },
-          onLeave: () => {
-            // Ensure exact center at handoff to main pinned scrolling
-            gsap.set(projectsWrapper, { x: cardPositions[0] });
-            cards.forEach((card, index) => {
-              gsap.to(card, { opacity: index === 0 ? 1 : 0.3, duration: 0.3 });
-            });
-          }
-        });
-
-        // Exit interaction: gentle fade-out when scrolling away - no push, just natural transition
-        if (!currentProjectsSection || !currentProjectsSection.isConnected) return;
-        ScrollTrigger.create({
-          id: 'projects-exit',
-          trigger: currentProjectsSection,
-          start: 'bottom top',   // when the section bottom reaches top (after pin ends)
-          end: '+=20vh',         // Even shorter exit zone for less interference
-          scrub: 0.5, // Match vertical scroll sensitivity for smooth transition
-          anticipatePin: 1,
-          markers: debugMode ? {
-            startColor: 'blue',
-            endColor: 'blue',
-            indent: 80,
-            fontSize: '10px'
-          } : false,
-          onUpdate: (self) => {
-            const p = self.progress; // 0 -> 1
-            // Very gentle easing - minimal movement
-            const easeFunc = gsap.parseEase("power1.out");
-            const easedProgress = easeFunc(p);
-            // Only slight movement - don't push users
-            const slightX = gsap.utils.interpolate(cardPositions[2], cardPositions[2] - 50, easedProgress * 0.3);
-            gsap.set(projectsWrapper, { x: slightX });
-            // Gentle opacity fade
-            cards.forEach((card, index) => {
-              const opacity = index === 2 ? 1 - (easedProgress * 0.2) : 0.3 - (easedProgress * 0.1);
-              gsap.to(card, { opacity: Math.max(0.2, opacity), duration: 0.2 });
-            });
-          },
-          onEnter: () => {
-            // Start from the third centered position
-            gsap.set(projectsWrapper, { x: cardPositions[2] });
-            cards.forEach((card, index) => {
-              gsap.to(card, { opacity: index === 2 ? 1 : 0.3, duration: 0.2 });
-            });
-          }
-        });
-
-
-        // Main projects pin with smooth scrolling and responsive snap
-        if (!currentProjectsSection || !currentProjectsSection.isConnected) return;
+        // ONE pinned, scrubbed trigger. Pin distance == horizontal travel, so the
+        // cards advance at the same rate as vertical scroll (1:1). A single
+        // gsap.set writes x per frame; the focused card is a class toggle (CSS
+        // owns the visuals). No per-frame gsap.to tweens, no elementFromPoint.
         ScrollTrigger.create({
           id: 'projects-scroll',
-          trigger: currentProjectsSection,
+          trigger: section,
           start: 'top top',
-          end: '+=600vh', // Reduced track for more responsive scrolling
-          pin: true, // Re-enabled for scroll effects
-          scrub: 0.3, // More responsive for smoother, more immediate scrolling
+          end: () => `+=${Math.max(1, Math.abs(measureRequiredX(0) - measureRequiredX(cards.length - 1)))}`,
+          pin: true,
+          pinSpacing: true,
+          scrub: 0.5,
           anticipatePin: 1,
-          snap: {
-            snapTo: (progress) => {
-              // If scrolling down past third project (progress > 0.95) and not hovered for 1s, disable snap
-              // This allows snapping to the third project (progress 1.0) but disables snap when trying to scroll past
-              if (isScrollingDownRef.current && progress > 0.95 && !thirdProjectHoveredFor1sRef.current) {
-                return null; // Disable snap when scrolling down past third project
-              }
-
-              // Get current velocity
-              const velocity = Math.abs(scrollVelocityRef.current);
-              const HIGH_VELOCITY_THRESHOLD = 0.015; // High scroll speed - scroll past without snapping
-              const LOW_VELOCITY_THRESHOLD = 0.002; // Low scroll speed - show attempted movement but don't snap
-
-              // If velocity is very high, don't snap - allow fast scrolling past
-              if (velocity > HIGH_VELOCITY_THRESHOLD) {
-                return null;
-              }
-
-              // Snap points
-              const snapPoints = [0, 0.5, 1];
-              const nearestSnapPoint = snapPoints.reduce((prev, curr) =>
-                Math.abs(curr - progress) < Math.abs(prev - progress) ? curr : prev
-              );
-              
-              // Distance to nearest snap point
-              const distanceToSnap = Math.abs(progress - nearestSnapPoint);
-              
-              // If velocity is low and we're close to a snap point, snap immediately
-              // If velocity is low but we're far, show attempted movement (return current progress with slight pull)
-              if (velocity < LOW_VELOCITY_THRESHOLD) {
-                if (distanceToSnap < 0.15) {
-                  // Close enough - snap immediately
-                  return nearestSnapPoint;
-                } else {
-                  // Too far - show attempted movement by slightly pulling toward snap point
-                  const pullStrength = 0.3; // How much to pull (0-1)
-                  const pullDirection = nearestSnapPoint > progress ? 1 : -1;
-                  const pulledProgress = progress + (distanceToSnap * pullStrength * pullDirection);
-                  return pulledProgress;
-                }
-              }
-
-              // Medium velocity - snap if close enough, otherwise continue scrolling
-              if (distanceToSnap < 0.1) {
-                return nearestSnapPoint;
-              }
-
-              // Default: snap to nearest
-              return nearestSnapPoint;
-            },
-            duration: { min: 0.05, max: 0.2 }, // Very fast snap when close, slightly longer when far
-            delay: 0, // No delay - snap immediately during scroll
-            ease: "power1.out", // Very smooth easing
-            directional: false,
-            inertia: true // Allow natural momentum scrolling
+          invalidateOnRefresh: true,
+          markers: debugMode ? { startColor: 'green', endColor: 'green', indent: 50, fontSize: '10px' } : false,
+          onEnter: () => setIsMainProjectsInView(true),
+          onEnterBack: () => setIsMainProjectsInView(true),
+          onLeave: clearActive,
+          onLeaveBack: clearActive,
+          onRefresh: () => {
+            startX = measureRequiredX(0);
+            endX = measureRequiredX(cards.length - 1);
+            gsap.set(wrapper, { x: startX });
           },
-          markers: debugMode ? {
-            startColor: "green",
-            endColor: "green",
-            indent: 50,
-            fontSize: "10px"
-          } : false,
           onUpdate: (self) => {
-            const progress = self.progress;
-
-            // Track scroll direction and velocity
-            const previousProgress = lastScrollProgressRef.current;
-            const isScrollingDown = progress > previousProgress;
-            isScrollingDownRef.current = isScrollingDown;
-            const isScrolling = Math.abs(progress - previousProgress) > 0.0001; // More sensitive threshold
-            
-            // Calculate velocity (change in progress per millisecond)
-            const now = Date.now();
-            const timeDelta = now - lastScrollTimeRef.current;
-            if (timeDelta > 0) {
-              const progressDelta = Math.abs(progress - previousProgress);
-              scrollVelocityRef.current = progressDelta / timeDelta; // Progress per ms
-            }
-            lastScrollTimeRef.current = now;
-            lastScrollProgressRef.current = progress;
-
-            // Determine which project will be snapped to based on nearest snap point
-            // This ensures only the project that will be snapped to is at 100% opacity
-            const snapPoints = [0, 0.5, 1];
-
-            // Find the nearest snap point to determine which project will be snapped to
-            let nearestSnapPoint = snapPoints[0];
-            let minDistance = Math.abs(progress - snapPoints[0]);
-            snapPoints.forEach((snapPoint) => {
-              const distance = Math.abs(progress - snapPoint);
-              if (distance < minDistance) {
-                minDistance = distance;
-                nearestSnapPoint = snapPoint;
-              }
-            });
-
-            // Map snap point to card index
-            let activeCardIndex = 0;
-            if (nearestSnapPoint === 0) {
-              activeCardIndex = 0;
-            } else if (nearestSnapPoint === 0.5) {
-              activeCardIndex = 1;
-            } else {
-              activeCardIndex = 2;
-            }
-
-            // Check if we're at a snap point (centered) - within 5% of snap points for better tolerance
-            const isAtSnapPoint = snapPoints.some(snapPoint => Math.abs(progress - snapPoint) < 0.05);
-
-            // Detect scrolling while hovered and trigger transition
-            const currentHoveredProject = hoveredProject;
-            const previousHoveredProject = previousHoveredProjectRef.current;
-
-            // CRITICAL: Maintain hover state continuously during scroll based on active project
-            // BUT only if cursor is actually over a project card (not just in center area)
-            if (isScrolling) {
-              // Check if cursor is actually over a project card
-              const mouseX = window.mouseX;
-              const mouseY = window.mouseY;
-              let isOverProject = false;
-
-              if (mouseX !== undefined && mouseY !== undefined) {
-                const elementUnderMouse = document.elementFromPoint(mouseX, mouseY);
-                isOverProject = elementUnderMouse && (
-                  elementUnderMouse.closest('.project-card') ||
-                  elementUnderMouse.closest('.mini-project-card')
-                );
-              }
-
-              // Only maintain hover if cursor is actually over a project OR if we're already in hover mode
-              // This prevents hover mode from activating just because cursor is in center area
-              const shouldMaintainHover = isOverProject || currentHoveredProject;
-
-              if (shouldMaintainHover) {
-                // Mark that we're scrolling to prevent onMouseLeave from clearing hover state
-                isScrollingToDifferentProjectRef.current = true;
-
-                // Determine which project should be hovered based on scroll position
-                const projectIds = ['cognixa', 'settlin', 'project3'];
-                const targetProjectId = projectIds[activeCardIndex];
-
-                // Continuously maintain hover state for the active project during scroll
-                // Only if cursor is over a project or we were already hovering
-                // IMPORTANT: Don't automatically set hover when snapping - only maintain if already hovering
-                if (targetProjectId) {
-                  // Only update hover state if:
-                  // 1. Cursor is actually over a project, OR
-                  // 2. We're already hovering (maintain existing hover state)
-                  if (isOverProject || currentHoveredProject) {
-                    if (targetProjectId !== currentHoveredProject) {
-                      // Track previous hover state before updating
-                      if (currentHoveredProject) {
-                        previousHoveredProjectRef.current = currentHoveredProject;
-                      }
-                      // Only update if cursor is actually over a project
-                      if (isOverProject) {
-                        setHoveredProject(targetProjectId);
-                      }
-                    }
-                    // Always ensure hover state is maintained (even if same project)
-                    // This prevents onMouseLeave from clearing it
-                    isScrollingToDifferentProjectRef.current = true;
-                  } else if (currentHoveredProject && !isOverProject) {
-                    // Clear hover if cursor left all projects
-                    setHoveredProject(null);
-                    isScrollingToDifferentProjectRef.current = false;
-                  }
-                }
-              } else if (currentHoveredProject) {
-                // Cursor is not over any project and we're not already hovering - clear hover state
-                setHoveredProject(null);
-                isScrollingToDifferentProjectRef.current = false;
-              }
-            }
-
-            // If user is hovering and scrolling, trigger transition when moving to different project
-            // Use previous hover state to detect when we've moved to a different project
-            if (previousHoveredProject && isScrolling && !isTransitioningRef.current) {
-              // Find the index of the previous hovered project (before update)
-              let fromProjectIndex = null;
-              if (previousHoveredProject === 'cognixa') fromProjectIndex = 0;
-              else if (previousHoveredProject === 'settlin') fromProjectIndex = 1;
-              else if (previousHoveredProject === 'pravah') fromProjectIndex = 2;
-
-              // Check if we're moving to a different project
-              const isMovingToDifferentProject = fromProjectIndex !== null && activeCardIndex !== fromProjectIndex;
-
-              // Trigger transition when we've moved to a different project
-              if (isMovingToDifferentProject && !hasTriggeredTransitionRef.current) {
-                // Get light rays wrapper and work summary
-                const lightRaysWrapper = document.querySelector('.light-rays-wrapper');
-                const workSummary = document.querySelector('.work-summary');
-
-                // Mark as triggered
-                hasTriggeredTransitionRef.current = true;
-
-                // Trigger transition with the target project index
-                handleHoverToScrollTransition(fromProjectIndex, activeCardIndex, cards, projectsSection, lightRaysWrapper, workSummary);
-              }
-            }
-
-            // Reset transition flag when at snap point
-            if (isAtSnapPoint) {
-              hasTriggeredTransitionRef.current = false;
-              isScrollingToDifferentProjectRef.current = false;
-            }
-
-            // Update previous hover state
-            previousHoveredProjectRef.current = currentHoveredProject;
-
-            // Calculate smooth position for immediate visual feedback with velocity-based magnetic attraction
-            // Interpolate through all three card positions for magnetic movement with easing
-            const velocity = Math.abs(scrollVelocityRef.current);
-            const HIGH_VELOCITY_THRESHOLD = 0.015;
-            const LOW_VELOCITY_THRESHOLD = 0.002;
-            
-            let smoothX;
-            if (progress <= 0.5) {
-              // Interpolate between first card (progress 0) and second card (progress 0.5)
-              const localProgress = progress / 0.5; // 0 to 1 between first and second card
-              
-              // Apply velocity-based magnetic attraction
-              let easedProgress;
-              if (velocity > HIGH_VELOCITY_THRESHOLD) {
-                // High velocity - linear, no magnetic pull
-                easedProgress = localProgress;
-              } else if (velocity < LOW_VELOCITY_THRESHOLD) {
-                // Low velocity - strong magnetic pull toward snap points
-                const snapPoint = localProgress < 0.5 ? 0 : 0.5;
-                const distanceToSnap = Math.abs(localProgress - snapPoint);
-                const magneticPull = 1 - (distanceToSnap * 2); // Stronger pull when closer
-                easedProgress = localProgress + (magneticPull * 0.15 * (snapPoint > localProgress ? 1 : -1));
-                easedProgress = Math.max(0, Math.min(1, easedProgress)); // Clamp
-              } else {
-                // Medium velocity - moderate magnetic pull
-                const eased = gsap.parseEase("power1.out")(localProgress);
-                const snapPoint = localProgress < 0.5 ? 0 : 0.5;
-                const distanceToSnap = Math.abs(localProgress - snapPoint);
-                const magneticPull = (1 - distanceToSnap * 2) * 0.1;
-                easedProgress = eased + (magneticPull * (snapPoint > localProgress ? 1 : -1));
-                easedProgress = Math.max(0, Math.min(1, easedProgress));
-              }
-              
-              smoothX = gsap.utils.interpolate(cardPositions[0], cardPositions[1], easedProgress);
-            } else {
-              // Interpolate between second card (progress 0.5) and third card (progress 1)
-              const localProgress = (progress - 0.5) / 0.5; // 0 to 1 between second and third card
-              
-              // Apply velocity-based magnetic attraction
-              let easedProgress;
-              if (velocity > HIGH_VELOCITY_THRESHOLD) {
-                // High velocity - linear, no magnetic pull
-                easedProgress = localProgress;
-              } else if (velocity < LOW_VELOCITY_THRESHOLD) {
-                // Low velocity - strong magnetic pull toward snap points
-                const snapPoint = localProgress < 0.5 ? 0.5 : 1;
-                const distanceToSnap = Math.abs(localProgress - snapPoint);
-                const magneticPull = 1 - (distanceToSnap * 2);
-                easedProgress = localProgress + (magneticPull * 0.15 * (snapPoint > localProgress ? 1 : -1));
-                easedProgress = Math.max(0, Math.min(1, easedProgress));
-              } else {
-                // Medium velocity - moderate magnetic pull
-                const eased = gsap.parseEase("power1.out")(localProgress);
-                const snapPoint = localProgress < 0.5 ? 0.5 : 1;
-                const distanceToSnap = Math.abs(localProgress - snapPoint);
-                const magneticPull = (1 - distanceToSnap * 2) * 0.1;
-                easedProgress = eased + (magneticPull * (snapPoint > localProgress ? 1 : -1));
-                easedProgress = Math.max(0, Math.min(1, easedProgress));
-              }
-              
-              smoothX = gsap.utils.interpolate(cardPositions[1], cardPositions[2], easedProgress);
-            }
-
-            // Update wrapper position smoothly based on scroll
-            gsap.set(projectsWrapper, { x: smoothX });
-
-            // Only one project active (full opacity) at a time - even during scrolling
-            cards.forEach((card, index) => {
-              if (isAtSnapPoint) {
-                // At snap point - centered project at 100%, others at 30%
-                if (index === activeCardIndex) {
-                  // Ensure centered class is set and scrolling is removed
-                  if (!card.classList.contains('centered')) {
-                    card.classList.add('centered');
-                  }
-                  card.classList.remove('scrolling');
-                  // Ensure centered project is hoverable immediately
-                  card.style.pointerEvents = 'auto';
-                  // Set opacity instantly when at snap point - no animation
-                  gsap.set(card, { opacity: 1, immediateRender: true });
-                  enforceProjectPointerEvents();
-                } else {
-                  // Ensure centered class is removed
-                  card.classList.remove('centered');
-                  card.classList.remove('scrolling');
-                  // Force non-centered projects to be non-hoverable immediately
-                  card.style.pointerEvents = 'none';
-                  // Set opacity instantly when at snap point - no animation
-                  gsap.set(card, { opacity: 0.3, immediateRender: true });
-                  enforceProjectPointerEvents();
-                }
-              } else {
-                // During scrolling - only active card at full opacity, others at reduced opacity
-                // Ensure centered class is removed and scrolling is set
-                card.classList.remove('centered');
-                if (!card.classList.contains('scrolling')) {
-                  card.classList.add('scrolling');
-                }
-
-                // Only active card gets full opacity, others get reduced opacity
-                // All cards are non-hoverable during scrolling (not hovered state)
-                // Set opacity instantly to ensure only one project is active
-                if (index === activeCardIndex) {
-                  gsap.set(card, { opacity: 1, immediateRender: true }); // Set instantly
-                  card.style.pointerEvents = 'none'; // Non-hoverable during scrolling
-                } else {
-                  gsap.set(card, { opacity: 0.3, immediateRender: true }); // Set instantly
-                  card.style.pointerEvents = 'none';
-                }
-              }
-            });
-          }
+            const p = self.progress;
+            gsap.set(wrapper, { x: startX + (endX - startX) * p });
+            setActive(Math.round(p * (cards.length - 1)));
+          },
         });
       };
 
@@ -1910,504 +1718,74 @@ function PortfolioApp() {
       };
 
       const applyMiniScrollLogic = () => {
-        // Re-check elements exist before proceeding
-        const currentMiniProjectsSection = document.querySelector('.mini-projects');
-        const currentMiniProjectsWrapper = document.querySelector('.mini-projects-wrapper');
-        const currentMiniCards = Array.from(document.querySelectorAll('.mini-project-card'));
-        
-        if (!currentMiniProjectsSection || !currentMiniProjectsWrapper || currentMiniCards.length < 3) {
-          return;
-        }
+        const section = document.querySelector('.mini-projects');
+        const wrapper = document.querySelector('.mini-projects-wrapper');
+        const cards = Array.from(document.querySelectorAll('.mini-project-card'));
+        if (!section || !wrapper || cards.length < 4) return;
 
-        const cardPositions = [
-          measureRequiredX(0), // First mini card centered
-          measureRequiredX(1), // Second mini card centered  
-          measureRequiredX(2), // Third mini card centered
-          measureRequiredX(3)  // Fourth mini card centered (if exists)
-        ];
+        ScrollTrigger.getAll().forEach((t) => {
+          if (t.vars && (t.vars.id === 'mini-projects-scroll' || t.vars.id === 'mini-projects-entry' || t.vars.id === 'mini-projects-exit')) t.kill();
+        });
 
-        // Entry/exit helpers
-        const measureRightmostX = (cardIndex) => {
-          const target = miniCards[cardIndex];
-          if (!target) return cardPositions[0];
-          const prevTransform = miniProjectsWrapper.style.transform;
-          miniProjectsWrapper.style.transform = 'none';
-          const targetRect = target.getBoundingClientRect();
-          const rightmostX = (window.innerWidth - targetRect.left) + 20;
-          miniProjectsWrapper.style.transform = prevTransform;
-          return rightmostX;
-        };
-        const measureLeftmostX = (cardIndex) => {
-          const target = miniCards[cardIndex];
-          if (!target) return cardPositions[cardIndex] || 0;
-          const prevTransform = miniProjectsWrapper.style.transform;
-          miniProjectsWrapper.style.transform = 'none';
-          const targetRect = target.getBoundingClientRect();
-          const leftmostX = -(targetRect.right) - 20;
-          miniProjectsWrapper.style.transform = prevTransform;
-          return leftmostX;
-        };
+        let startX = measureRequiredX(0);
+        let endX = measureRequiredX(cards.length - 1);
 
-        const firstIndex = 0;
-        const lastIndex = Math.min(miniCards.length - 1, 3);
-        const miniEntryStartX = measureRightmostX(firstIndex);
-        const miniExitEndX = measureLeftmostX(lastIndex);
+        gsap.set(cards, { clearProps: 'transform,scale,filter', opacity: 1 });
+        gsap.set(wrapper, { x: startX });
 
-        // Initialize off to right for entry
-        gsap.set(miniProjectsWrapper, { x: miniEntryStartX, force3D: true });
-
-        // Kill previous mini project triggers for idempotency
-        ScrollTrigger.getAll().forEach(t => {
-          if (t.vars && (t.vars.id === 'mini-projects-scroll' || t.vars.id === 'mini-projects-entry' || t.vars.id === 'mini-projects-exit' || t.vars.id?.includes('mini-project-'))) {
-            t.kill();
+        const ids = ['prism', 'jarvis', 'bloom-bakehouse', 'conscious-living'];
+        let lastIdx = -1;
+        const setActive = (idx) => {
+          const clamped = Math.max(0, Math.min(cards.length - 1, idx));
+          if (clamped === lastIdx) return;
+          lastIdx = clamped;
+          cards.forEach((c, i) => c.classList.toggle('centered', i === clamped));
+          const id = ids[clamped];
+          // Same rule as main projects (see there): touch = scroll-driven focus,
+          // web = hover-driven (clear on scroll so Aurora/dark never sticks).
+          if (isTouchOrNarrow()) {
+            setHoveredMiniProject((prev) => (prev === id ? prev : id));
+            setShowMiniAurora(true);
+          } else {
+            setHoveredMiniProject(null);
+            setShowMiniAurora(false);
           }
-        });
+        };
+        const clearActive = () => {
+          lastIdx = -1;
+          cards.forEach((c) => c.classList.remove('centered'));
+          setHoveredMiniProject(null);
+          setShowMiniAurora(false);
+          setIsMiniProjectsInView(false);
+        };
 
-        // Initialize all mini cards as visible with same scale
-        gsap.set(miniCards, {
-          opacity: 1,
-          scale: 1,
-          filter: 'blur(0px)'
-        });
-
-        // Track the currently centered mini project
-        let currentCenteredMiniProject = 0;
-
-
-        // Entry slide: bring first mini project from right into center before pin starts
-        if (!currentMiniProjectsSection || !currentMiniProjectsSection.isConnected) return;
-        ScrollTrigger.create({
-          id: 'mini-projects-entry',
-          trigger: currentMiniProjectsSection,
-          start: 'top bottom',
-          end: 'top top',
-          scrub: 0.5, // Match vertical scroll sensitivity for smooth transition
-          anticipatePin: 1,
-          markers: debugMode ? {
-            startColor: 'purple',
-            endColor: 'purple',
-            indent: 0,
-            fontSize: '10px'
-          } : false,
-          onUpdate: (self) => {
-            const p = self.progress; // 0 -> 1
-            // Apply easing curve for smoother transition
-            const easeFunc = gsap.parseEase("power2.out");
-            const easedProgress = easeFunc(p);
-            const x = gsap.utils.interpolate(miniEntryStartX, cardPositions[firstIndex], easedProgress);
-            gsap.set(miniProjectsWrapper, { x, force3D: true });
-            miniCards.forEach((card, index) => {
-              gsap.to(card, { opacity: index === firstIndex ? 1 : 0.3, duration: 0.3 });
-            });
-          },
-          onLeave: () => {
-            gsap.set(miniProjectsWrapper, { x: cardPositions[firstIndex], force3D: true });
-            miniCards.forEach((card, index) => {
-              gsap.to(card, { opacity: index === firstIndex ? 1 : 0.3, duration: 0.3 });
-            });
-          }
-        });
-
-        // Mini projects pin with smooth scrolling and responsive snap
-        if (!currentMiniProjectsSection || !currentMiniProjectsSection.isConnected) return;
-        
-        // Lock section dimensions before creating ScrollTrigger to prevent layout shifts
-        const lockedHeight = currentMiniProjectsSection.offsetHeight;
-        if (lockedHeight > 0) {
-          currentMiniProjectsSection.style.height = `${lockedHeight}px`;
-          currentMiniProjectsSection.style.minHeight = `${lockedHeight}px`;
-          currentMiniProjectsSection.style.maxHeight = `${lockedHeight}px`;
-        }
-        
+        // ONE pinned, scrubbed trigger (see the main projects section for the
+        // same clean pattern): single gsap.set per frame, class-toggle focus.
         ScrollTrigger.create({
           id: 'mini-projects-scroll',
-          trigger: currentMiniProjectsSection,
+          trigger: section,
           start: 'top top',
-          end: '+=600vh', // Reduced track for more responsive scrolling
-          pin: true, // Re-enabled for scroll effects
+          end: () => `+=${Math.max(1, Math.abs(measureRequiredX(0) - measureRequiredX(cards.length - 1)))}`,
+          pin: true,
           pinSpacing: true,
-          scrub: 0.3, // More responsive for smoother, more immediate scrolling
+          scrub: 0.5,
           anticipatePin: 1,
-          invalidateOnRefresh: false,
-          refreshPriority: -1,
-          snap: {
-            snapTo: (progress) => {
-              // If scrolling down past last mini project (progress > 0.95), disable snap
-              // This allows snapping to the last mini project (progress 1.0) but disables snap when trying to scroll past
-              if (isMiniScrollingDownRef.current && progress > 0.95) {
-                return null; // Disable snap when scrolling down past last mini project
-              }
-
-              // Get current velocity
-              const velocity = Math.abs(miniScrollVelocityRef.current);
-              const HIGH_VELOCITY_THRESHOLD = 0.015; // High scroll speed - scroll past without snapping
-              const LOW_VELOCITY_THRESHOLD = 0.002; // Low scroll speed - show attempted movement but don't snap
-
-              // If velocity is very high, don't snap - allow fast scrolling past
-              if (velocity > HIGH_VELOCITY_THRESHOLD) {
-                return null;
-              }
-
-              // Snap points
-              const snapPoints = [0, 0.33, 0.66, 1];
-              const nearestSnapPoint = snapPoints.reduce((prev, curr) =>
-                Math.abs(curr - progress) < Math.abs(prev - progress) ? curr : prev
-              );
-              
-              // Distance to nearest snap point
-              const distanceToSnap = Math.abs(progress - nearestSnapPoint);
-              
-              // If velocity is low and we're close to a snap point, snap immediately
-              // If velocity is low but we're far, show attempted movement (return current progress with slight pull)
-              if (velocity < LOW_VELOCITY_THRESHOLD) {
-                if (distanceToSnap < 0.15) {
-                  // Close enough - snap immediately
-                  return nearestSnapPoint;
-                } else {
-                  // Too far - show attempted movement by slightly pulling toward snap point
-                  const pullStrength = 0.3; // How much to pull (0-1)
-                  const pullDirection = nearestSnapPoint > progress ? 1 : -1;
-                  const pulledProgress = progress + (distanceToSnap * pullStrength * pullDirection);
-                  return pulledProgress;
-                }
-              }
-
-              // Medium velocity - snap if close enough, otherwise continue scrolling
-              if (distanceToSnap < 0.1) {
-                return nearestSnapPoint;
-              }
-
-              // Default: snap to nearest
-              return nearestSnapPoint;
-            },
-            duration: { min: 0.05, max: 0.2 }, // Very fast snap when close, slightly longer when far
-            delay: 0, // No delay - snap immediately during scroll
-            ease: "power1.out", // Very smooth easing
-            directional: false,
-            inertia: true // Allow natural momentum scrolling
-          },
-          markers: debugMode ? {
-            startColor: "purple",
-            endColor: "purple",
-            indent: 0,
-            fontSize: "10px"
-          } : false,
-          onUpdate: (self) => {
-            const progress = self.progress;
-
-            // Track scroll direction and velocity
-            const previousProgress = lastMiniScrollProgressRef.current;
-            const isScrollingDown = progress > previousProgress;
-            isMiniScrollingDownRef.current = isScrollingDown;
-            const isScrolling = Math.abs(progress - previousProgress) > 0.0001; // More sensitive threshold
-            
-            // Calculate velocity (change in progress per millisecond)
-            const now = Date.now();
-            const timeDelta = now - lastMiniScrollTimeRef.current;
-            if (timeDelta > 0) {
-              const progressDelta = Math.abs(progress - previousProgress);
-              miniScrollVelocityRef.current = progressDelta / timeDelta; // Progress per ms
-            }
-            lastMiniScrollTimeRef.current = now;
-            lastMiniScrollProgressRef.current = progress;
-
-            // Determine which project will be snapped to based on nearest snap point
-            // This ensures only the project that will be snapped to is at 100% opacity
-            const snapPoints = [0, 0.33, 0.66, 1];
-
-            // Find the nearest snap point to determine which project will be snapped to
-            let nearestSnapPoint = snapPoints[0];
-            let minDistance = Math.abs(progress - snapPoints[0]);
-            snapPoints.forEach((snapPoint) => {
-              const distance = Math.abs(progress - snapPoint);
-              if (distance < minDistance) {
-                minDistance = distance;
-                nearestSnapPoint = snapPoint;
-              }
-            });
-
-            // Map snap point to card index
-            let activeCardIndex = 0;
-            if (nearestSnapPoint === 0) {
-              activeCardIndex = 0;
-            } else if (nearestSnapPoint === 0.33) {
-              activeCardIndex = 1;
-            } else if (nearestSnapPoint === 0.66) {
-              activeCardIndex = 2;
-            } else {
-              activeCardIndex = 3;
-            }
-
-            // Check if we're at a snap point (centered) - within 3% of snap points for tighter tolerance
-            // Also consider velocity - if velocity is very low and we're close, consider it centered
-            const velocity = Math.abs(miniScrollVelocityRef.current);
-            const snapTolerance = velocity < 0.002 ? 0.08 : 0.03; // Wider tolerance when slow
-            const isAtSnapPoint = snapPoints.some(snapPoint => Math.abs(progress - snapPoint) < snapTolerance);
-
-            // Detect scrolling while hovered and trigger transition
-            const currentHoveredMiniProject = hoveredMiniProject;
-            const previousHoveredMiniProject = previousHoveredMiniProjectRef.current;
-
-            // CRITICAL: Maintain hover state continuously during scroll based on active project
-            // BUT only if cursor is actually over a mini project card (not just in center area)
-            if (isScrolling) {
-              // Check if cursor is actually over a mini project card
-              const mouseX = window.mouseX;
-              const mouseY = window.mouseY;
-              let isOverMiniProject = false;
-
-              if (mouseX !== undefined && mouseY !== undefined) {
-                const elementUnderMouse = document.elementFromPoint(mouseX, mouseY);
-                isOverMiniProject = elementUnderMouse && elementUnderMouse.closest('.mini-project-card');
-              }
-
-              // Only maintain hover if cursor is actually over a mini project OR if we're already in hover mode
-              // This prevents hover mode from activating just because cursor is in center area
-              const shouldMaintainHover = isOverMiniProject || currentHoveredMiniProject;
-
-              if (shouldMaintainHover) {
-                // Mark that we're scrolling to prevent onMouseLeave from clearing hover state
-                isScrollingToDifferentMiniProjectRef.current = true;
-
-                // Determine which project should be hovered based on scroll position
-                const miniProjectIds = ['prism', 'jarvis', 'bloom-bakehouse', 'conscious-living'];
-                const targetProjectId = miniProjectIds[activeCardIndex];
-
-                // Continuously maintain hover state for the active project during scroll
-                // Only if cursor is over a project or we were already hovering
-                if (targetProjectId) {
-                  if (targetProjectId !== currentHoveredMiniProject) {
-                    // Track previous hover state before updating
-                    if (currentHoveredMiniProject) {
-                      previousHoveredMiniProjectRef.current = currentHoveredMiniProject;
-                    }
-                    // Update hover state immediately to match active project
-                    setHoveredMiniProject(targetProjectId);
-                  }
-                  // ALWAYS ensure showMiniAurora is true during scroll
-                  // Set it every frame during scroll to prevent flickering
-                  // This ensures it's never cleared during scroll transitions
-                  setShowMiniAurora(true);
-                  // Always ensure hover state is maintained (even if same project)
-                  // This prevents onMouseLeave from clearing it
-                  isScrollingToDifferentMiniProjectRef.current = true;
-                }
-              }
-            }
-
-            // If user is hovering and scrolling, trigger transition when moving to different project
-            // Use previous hover state to detect when we've moved to a different project
-            if (previousHoveredMiniProject && isScrolling && !isTransitioningRef.current) {
-              // Find the index of the previous hovered mini project (before update)
-              const projectCardClassMap = {
-                'prism': 0,
-                'jarvis': 1,
-                'bloom-bakehouse': 2,
-                'conscious-living': 3
-              };
-              const fromProjectIndex = projectCardClassMap[previousHoveredMiniProject] ?? null;
-
-              // Check if we're moving to a different project
-              const isMovingToDifferentProject = fromProjectIndex !== null && activeCardIndex !== fromProjectIndex;
-
-              // Trigger transition when we've moved to a different project
-              if (isMovingToDifferentProject && !hasTriggeredMiniTransitionRef.current) {
-                // Get aurora wrapper and viewport container
-                const auroraWrapper = document.querySelector('.aurora-wrapper');
-                const miniProjectsViewportContainer = document.querySelector('.mini-projects-viewport-container');
-
-                // Mark as triggered
-                hasTriggeredMiniTransitionRef.current = true;
-
-                // Trigger transition with the target project index
-                handleMiniHoverToScrollTransition(fromProjectIndex, activeCardIndex, miniCards, miniProjectsSection, auroraWrapper, miniProjectsViewportContainer);
-              }
-            }
-
-            // Reset transition flag when at snap point
-            if (isAtSnapPoint) {
-              hasTriggeredMiniTransitionRef.current = false;
-              isScrollingToDifferentMiniProjectRef.current = false;
-            }
-
-            // Update previous hover state
-            previousHoveredMiniProjectRef.current = currentHoveredMiniProject;
-
-            // Calculate smooth position for immediate visual feedback with velocity-based magnetic attraction
-            // Interpolate through all four card positions for magnetic movement with easing
-            // Reuse velocity already calculated above
-            const HIGH_VELOCITY_THRESHOLD = 0.015;
-            const LOW_VELOCITY_THRESHOLD = 0.002;
-            
-            let smoothX;
-            if (progress <= 0.33) {
-              // Interpolate between first card (progress 0) and second card (progress 0.33)
-              const localProgress = progress / 0.33; // 0 to 1 between first and second card
-              
-              // Apply velocity-based magnetic attraction
-              let easedProgress;
-              if (velocity > HIGH_VELOCITY_THRESHOLD) {
-                // High velocity - linear, no magnetic pull
-                easedProgress = localProgress;
-              } else if (velocity < LOW_VELOCITY_THRESHOLD) {
-                // Low velocity - strong magnetic pull toward snap points
-                const snapPoint = localProgress < 0.5 ? 0 : 0.33;
-                const distanceToSnap = Math.abs(localProgress - snapPoint);
-                const magneticPull = 1 - (distanceToSnap * 2);
-                easedProgress = localProgress + (magneticPull * 0.15 * (snapPoint > localProgress ? 1 : -1));
-                easedProgress = Math.max(0, Math.min(1, easedProgress));
-              } else {
-                // Medium velocity - moderate magnetic pull
-                const eased = gsap.parseEase("power1.out")(localProgress);
-                const snapPoint = localProgress < 0.5 ? 0 : 0.33;
-                const distanceToSnap = Math.abs(localProgress - snapPoint);
-                const magneticPull = (1 - distanceToSnap * 2) * 0.1;
-                easedProgress = eased + (magneticPull * (snapPoint > localProgress ? 1 : -1));
-                easedProgress = Math.max(0, Math.min(1, easedProgress));
-              }
-              
-              smoothX = gsap.utils.interpolate(cardPositions[0], cardPositions[1], easedProgress);
-            } else if (progress <= 0.66) {
-              // Interpolate between second card (progress 0.33) and third card (progress 0.66)
-              const localProgress = (progress - 0.33) / 0.33; // 0 to 1 between second and third card
-              
-              // Apply velocity-based magnetic attraction
-              let easedProgress;
-              if (velocity > HIGH_VELOCITY_THRESHOLD) {
-                easedProgress = localProgress;
-              } else if (velocity < LOW_VELOCITY_THRESHOLD) {
-                const snapPoint = localProgress < 0.5 ? 0.33 : 0.66;
-                const distanceToSnap = Math.abs(localProgress - snapPoint);
-                const magneticPull = 1 - (distanceToSnap * 2);
-                easedProgress = localProgress + (magneticPull * 0.15 * (snapPoint > localProgress ? 1 : -1));
-                easedProgress = Math.max(0, Math.min(1, easedProgress));
-              } else {
-                const eased = gsap.parseEase("power1.out")(localProgress);
-                const snapPoint = localProgress < 0.5 ? 0.33 : 0.66;
-                const distanceToSnap = Math.abs(localProgress - snapPoint);
-                const magneticPull = (1 - distanceToSnap * 2) * 0.1;
-                easedProgress = eased + (magneticPull * (snapPoint > localProgress ? 1 : -1));
-                easedProgress = Math.max(0, Math.min(1, easedProgress));
-              }
-              
-              smoothX = gsap.utils.interpolate(cardPositions[1], cardPositions[2], easedProgress);
-            } else {
-              // Interpolate between third card (progress 0.66) and fourth card (progress 1)
-              const localProgress = (progress - 0.66) / 0.34; // 0 to 1 between third and fourth card
-              
-              // Apply velocity-based magnetic attraction
-              let easedProgress;
-              if (velocity > HIGH_VELOCITY_THRESHOLD) {
-                easedProgress = localProgress;
-              } else if (velocity < LOW_VELOCITY_THRESHOLD) {
-                const snapPoint = localProgress < 0.5 ? 0.66 : 1;
-                const distanceToSnap = Math.abs(localProgress - snapPoint);
-                const magneticPull = 1 - (distanceToSnap * 2);
-                easedProgress = localProgress + (magneticPull * 0.15 * (snapPoint > localProgress ? 1 : -1));
-                easedProgress = Math.max(0, Math.min(1, easedProgress));
-              } else {
-                const eased = gsap.parseEase("power1.out")(localProgress);
-                const snapPoint = localProgress < 0.5 ? 0.66 : 1;
-                const distanceToSnap = Math.abs(localProgress - snapPoint);
-                const magneticPull = (1 - distanceToSnap * 2) * 0.1;
-                easedProgress = eased + (magneticPull * (snapPoint > localProgress ? 1 : -1));
-                easedProgress = Math.max(0, Math.min(1, easedProgress));
-              }
-              
-              smoothX = gsap.utils.interpolate(cardPositions[2], cardPositions[3] || cardPositions[2], easedProgress);
-            }
-
-            // Update wrapper position smoothly based on scroll
-            gsap.set(miniProjectsWrapper, { x: smoothX, force3D: true });
-
-            // Update the currently centered project
-            currentCenteredMiniProject = activeCardIndex;
-
-            // Only one project active (full opacity) at a time - even during scrolling
-            miniCards.forEach((card, index) => {
-              if (isAtSnapPoint) {
-                // At snap point - centered project at 100%, others at 30%
-                if (index === activeCardIndex) {
-                  // Ensure centered class is set and scrolling is removed
-                  if (!card.classList.contains('centered')) {
-                    card.classList.add('centered');
-                  }
-                  card.classList.remove('scrolling');
-                  // Ensure centered mini project is hoverable immediately
-                  card.style.pointerEvents = 'auto';
-                  // Set opacity instantly when at snap point - no animation
-                  gsap.set(card, { opacity: 1, immediateRender: true });
-                  enforceMiniProjectPointerEvents();
-                } else {
-                  // Ensure centered class is removed
-                  card.classList.remove('centered');
-                  card.classList.remove('scrolling');
-                  // Force non-centered mini projects to be non-hoverable immediately
-                  card.style.pointerEvents = 'none';
-                  // Set opacity instantly when at snap point - no animation
-                  gsap.set(card, { opacity: 0.3, immediateRender: true });
-                  enforceMiniProjectPointerEvents();
-                }
-              } else {
-                // During scrolling - only active card at full opacity, others at reduced opacity
-                // Ensure centered class is removed and scrolling is set
-                card.classList.remove('centered');
-                if (!card.classList.contains('scrolling')) {
-                  card.classList.add('scrolling');
-                }
-
-                // Only active card gets full opacity, others get reduced opacity
-                // All cards are non-hoverable during scrolling (not hovered state)
-                // Set opacity instantly to ensure only one project is active
-                if (index === activeCardIndex) {
-                  gsap.set(card, { opacity: 1, immediateRender: true }); // Set instantly
-                  card.style.pointerEvents = 'none'; // Non-hoverable during scrolling
-                } else {
-                  gsap.set(card, { opacity: 0.3, immediateRender: true }); // Set instantly
-                  card.style.pointerEvents = 'none';
-                }
-              }
-            });
-
-          }
-        });
-
-        // Exit interaction: gentle fade-out when scrolling away - no push, just natural transition
-        if (!currentMiniProjectsSection || !currentMiniProjectsSection.isConnected) return;
-        ScrollTrigger.create({
-          id: 'mini-projects-exit',
-          trigger: currentMiniProjectsSection,
-          start: 'bottom top',
-          end: '+=20vh', // Even shorter exit zone for less interference
-          scrub: 0.5, // Match vertical scroll sensitivity for smooth transition
-          anticipatePin: 1,
-          markers: debugMode ? {
-            startColor: 'purple',
-            endColor: 'purple',
-            indent: 40,
-            fontSize: '10px'
-          } : false,
-          onEnter: () => {
-            gsap.set(miniProjectsWrapper, { x: cardPositions[lastIndex], force3D: true });
-            miniCards.forEach((card, index) => {
-              gsap.to(card, { opacity: index === lastIndex ? 1 : 0.3, duration: 0.2 });
-            });
+          invalidateOnRefresh: true,
+          markers: debugMode ? { startColor: 'purple', endColor: 'purple', indent: 50, fontSize: '10px' } : false,
+          onEnter: () => setIsMiniProjectsInView(true),
+          onEnterBack: () => setIsMiniProjectsInView(true),
+          onLeave: clearActive,
+          onLeaveBack: clearActive,
+          onRefresh: () => {
+            startX = measureRequiredX(0);
+            endX = measureRequiredX(cards.length - 1);
+            gsap.set(wrapper, { x: startX });
           },
           onUpdate: (self) => {
-            const p = self.progress; // 0 -> 1
-            // Very gentle easing - minimal movement
-            const easeFunc = gsap.parseEase("power1.out");
-            const easedProgress = easeFunc(p);
-            // Only slight movement - don't push users
-            const lastCardPos = cardPositions[lastIndex] || cardPositions[2];
-            const slightX = gsap.utils.interpolate(lastCardPos, lastCardPos - 50, easedProgress * 0.3);
-            gsap.set(miniProjectsWrapper, { x: slightX, force3D: true });
-            // Gentle opacity fade
-            miniCards.forEach((card, index) => {
-              const opacity = index === lastIndex ? 1 - (easedProgress * 0.2) : 0.3 - (easedProgress * 0.1);
-              gsap.to(card, { opacity: Math.max(0.2, opacity), duration: 0.2 });
-            });
-          }
+            const p = self.progress;
+            gsap.set(wrapper, { x: startX + (endX - startX) * p });
+            setActive(Math.round(p * (cards.length - 1)));
+          },
         });
       };
 
@@ -2544,170 +1922,54 @@ function PortfolioApp() {
           e.preventDefault();
           e.stopPropagation();
           e.stopImmediatePropagation(); // Prevent other handlers from running
-          
-          // Save scroll position immediately to prevent any scroll changes
-          const savedScrollY = window.scrollY;
-          const savedScrollX = window.scrollX;
-          
+
           const contactType = option.dataset.section;
           debugLog('Contact option clicked:', contactType);
-          
-          // Explicitly prevent about section behaviors
-          // Ensure activeSection doesn't change for contact options
-          // This prevents scroll-to-top and arrow morphing
-          
-          // Prevent any scroll changes during the click handling
-          const preventScroll = () => {
-            if (window.scrollY !== savedScrollY || window.scrollX !== savedScrollX) {
-              window.scrollTo(savedScrollX, savedScrollY);
-            }
-          };
-          
-          // Monitor and prevent scroll changes
-          const scrollCheckInterval = setInterval(preventScroll, 10);
-          setTimeout(() => clearInterval(scrollCheckInterval), 500);
 
-          // Helper function to calculate scroll depth (local to avoid scope issues)
+          // mailto: / window.open(_blank) do NOT scroll the page, so there is
+          // nothing to "lock" against. (This handler used to run setInterval
+          // scroll-locks that froze the page for ~500ms after a click.)
           const calculateScrollDepth = () => {
             try {
-              const windowHeight = window.innerHeight;
-              const documentHeight = document.documentElement.scrollHeight;
-              const scrollTop = window.scrollY;
-              const scrollableHeight = documentHeight - windowHeight;
-              if (scrollableHeight <= 0) return 0;
-              return Math.min(100, Math.round((scrollTop / scrollableHeight) * 100));
+              const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+              if (scrollable <= 0) return 0;
+              return Math.min(100, Math.round((window.scrollY / scrollable) * 100));
             } catch (err) {
               return 0;
             }
           };
 
-          // Track contact click with Mixpanel - send immediately before navigation
           if (window.mixpanel && typeof window.mixpanel.track === 'function') {
             try {
-              const timeBeforeConversion = sessionStartTime.current ? 
+              const timeBeforeConversion = sessionStartTime.current ?
                 Math.round((Date.now() - sessionStartTime.current) / 1000) : 0;
-              const scrollDepth = calculateScrollDepth();
-              
               window.mixpanel.track('Conversion', {
                 'Conversion Type': `Contact - ${contactType}`,
                 contact_method: contactType,
                 page_url: window.location.href,
                 time_on_page_before_conversion: timeBeforeConversion,
-                scroll_depth_at_conversion: scrollDepth,
+                scroll_depth_at_conversion: calculateScrollDepth(),
                 max_scroll_depth: maxScrollDepth.current || 0,
                 total_projects_viewed: projectsViewed.current ? projectsViewed.current.size : 0,
                 projects_viewed_list: projectsViewed.current ? Array.from(projectsViewed.current) : [],
                 session_duration: timeBeforeConversion,
               });
             } catch (err) {
-              // Mixpanel tracking error
+              // Never block navigation on analytics.
             }
           }
 
-          // Small delay to ensure Mixpanel request is sent before opening link
-          // This prevents cancelled requests when link opens
-          setTimeout(() => {
-            try {
-              // Handle different contact types after tracking
-              if (contactType === 'email') {
-                // Store scroll position before creating link
-                const currentScrollY = window.scrollY;
-                const currentScrollX = window.scrollX;
-                
-                // Create a scroll lock function
-                const lockScroll = () => {
-                  window.scrollTo(currentScrollX, currentScrollY);
-                };
-                
-                // Lock scroll position during mailto action
-                const scrollLockInterval = setInterval(lockScroll, 5);
-                
-                const mailtoLink = document.createElement('a');
-                mailtoLink.href = 'mailto:connect@pratiksinghal.in';
-                mailtoLink.style.display = 'none';
-                mailtoLink.style.position = 'absolute';
-                mailtoLink.style.left = '-9999px';
-                mailtoLink.style.top = '-9999px';
-                mailtoLink.setAttribute('tabindex', '-1');
-                
-                document.body.appendChild(mailtoLink);
-                
-                // Ensure scroll position is locked before clicking
-                window.scrollTo(currentScrollX, currentScrollY);
-                
-                // Use a small delay to ensure scroll is locked
-                requestAnimationFrame(() => {
-                  window.scrollTo(currentScrollX, currentScrollY);
-                  mailtoLink.click();
-                  
-                  // Keep scroll locked for a bit after click
-                  requestAnimationFrame(() => {
-                    window.scrollTo(currentScrollX, currentScrollY);
-                  });
-                });
-                
-                // Clean up and ensure scroll stays locked
-                setTimeout(() => {
-                  try {
-                    clearInterval(scrollLockInterval);
-                    document.body.removeChild(mailtoLink);
-                    // Final scroll position restore
-                    window.scrollTo(currentScrollX, currentScrollY);
-                  } catch (cleanupErr) {
-                    // Ignore cleanup errors
-                  }
-                }, 200);
-              } else if (contactType === 'schedule') {
-                // Open calendar link in new tab - stays on homepage
-                window.open('https://calendar.app.google/EzFhyN3hioUtucrZ9', '_blank', 'noopener,noreferrer');
-              } else if (contactType === 'message') {
-                // Open WhatsApp link in new tab
-                window.open('https://wa.me/message/PGKCRHXIUMD5B1', '_blank', 'noopener,noreferrer');
-              }
-            } catch (err) {
-              // Error opening contact link
-              // Fallback: try alternative methods if primary fails
-              if (contactType === 'email') {
-                // Fallback: try direct mailto
-                try {
-                  const currentScrollY = window.scrollY;
-                  const mailtoLink = document.createElement('a');
-                  mailtoLink.href = 'mailto:your@email.com';
-                  mailtoLink.style.display = 'none';
-                  mailtoLink.style.position = 'absolute';
-                  mailtoLink.style.left = '-9999px';
-                  document.body.appendChild(mailtoLink);
-                  mailtoLink.click();
-                  // Restore scroll position
-                  requestAnimationFrame(() => {
-                    window.scrollTo(0, currentScrollY);
-                  });
-                  setTimeout(() => {
-                    try {
-                      document.body.removeChild(mailtoLink);
-                      window.scrollTo(0, currentScrollY);
-                    } catch (e) {
-                      // Ignore cleanup errors
-                    }
-                  }, 100);
-                } catch (fallbackErr) {
-                  // Fallback mailto failed
-                }
-              } else if (contactType === 'schedule') {
-                try {
-                  window.open('https://calendar.app.google/EzFhyN3hioUtucrZ9', '_blank', 'noopener,noreferrer');
-                } catch (e) {
-                  // Failed to open schedule link
-                }
-              } else if (contactType === 'message') {
-                try {
-                  window.open('https://wa.me/message/PGKCRHXIUMD5B1', '_blank', 'noopener,noreferrer');
-                } catch (e) {
-                  // Failed to open WhatsApp link
-                }
-              }
+          try {
+            if (contactType === 'email') {
+              window.location.href = 'mailto:connect@pratiksinghal.in';
+            } else if (contactType === 'schedule') {
+              window.open('https://calendar.app.google/EzFhyN3hioUtucrZ9', '_blank', 'noopener,noreferrer');
+            } else if (contactType === 'message') {
+              window.open('https://wa.me/message/PGKCRHXIUMD5B1', '_blank', 'noopener,noreferrer');
             }
-          }, 150); // 150ms delay to allow Mixpanel request to be sent
+          } catch (err) {
+            // Failed to open contact link
+          }
         }, true); // Use capture phase to run before other handlers
       });
     };
@@ -2924,6 +2186,14 @@ function PortfolioApp() {
 
   // Custom cursor with magnetic trail - ONLY for homepage
   useEffect(() => {
+    // Touch devices have no pointer to follow: don't create the floating dot/ring/
+    // label at all. This is what eliminates the "square stays stuck after I tap
+    // out" bug — there is simply no trail on touch. CSS (body.touch-device) shows
+    // tap affordances on the elements instead.
+    if (window.matchMedia('(hover: none) and (pointer: coarse)').matches) {
+      document.body.classList.add('touch-device');
+      return () => document.body.classList.remove('touch-device');
+    }
     let mouseX = window.innerWidth / 2;
     let mouseY = -50; // Position cursor at top center but out of sight
     let trailX = window.innerWidth / 2;
@@ -2949,6 +2219,28 @@ function PortfolioApp() {
     label.textContent = '';
     document.body.appendChild(label);
 
+    // Fully detach the floating square/label from any element and revert to the
+    // plain dot-trail. Centralised so the rAF proximity check AND the mouseleave
+    // handlers clear the exact same state — this is what stops the square getting
+    // "stuck" when scroll focus (dark-mode) is on but the pointer has moved away.
+    const releaseTrail = () => {
+      isHoveringProject = false;
+      hoveredElement = null;
+      if (trail && trail.isConnected) {
+        trail.classList.remove(
+          'magnetic-rectangle', 'magnetic-square', 'about-rect',
+          'magnetic-audio-button', 'magnetic-audio-button-rect'
+        );
+        trail.style.width = '';
+        trail.style.height = '';
+      }
+      if (label && label.isConnected) {
+        label.classList.remove('visible');
+        label.textContent = '';
+      }
+      window.__hoveredAboutSection = null;
+    };
+
     const handleMouseMove = (e) => {
       mouseX = e.clientX;
       mouseY = e.clientY;
@@ -2968,45 +2260,19 @@ function PortfolioApp() {
       if (!trail || !trail.isConnected) return;
 
       if (isHoveringProject && hoveredElement && hoveredElement.isConnected) {
-        // Check if we're in hover mode (dark mode active)
-        const inMainProjectHoverMode = document.querySelector('.main-projects.dark-mode');
-        const inMiniProjectHoverMode = document.querySelector('.mini-projects-viewport-container.dark-mode');
+        const rect = hoveredElement.getBoundingClientRect();
+        // Magnetic capture: the square only wraps the element while the pointer is
+        // genuinely within a margin of it. If the pointer moved away — or the page
+        // scrolled a scroll-focused (dark-mode) card out from under it — release,
+        // so the square is driven by the POINTER, never by scroll focus. This is
+        // the fix for "the square is there even when my pointer isn't on it".
+        const margin = 70;
+        const within = rect.width > 0 && rect.height > 0 &&
+          mouseX >= rect.left - margin && mouseX <= rect.right + margin &&
+          mouseY >= rect.top - margin && mouseY <= rect.bottom + margin;
 
-        if (inMainProjectHoverMode || inMiniProjectHoverMode) {
-          // In hover mode: lock trail to project track center (where projects snap to)
-          let targetX = window.innerWidth / 2;
-          let targetY = window.innerHeight / 2;
-
-          if (inMainProjectHoverMode) {
-            const projectsTrack = document.querySelector('.projects-track');
-            if (projectsTrack) {
-              const trackRect = projectsTrack.getBoundingClientRect();
-              targetX = trackRect.left + (trackRect.width / 2);
-              targetY = trackRect.top + (trackRect.height / 2);
-            }
-          } else if (inMiniProjectHoverMode) {
-            const miniProjectsTrack = document.querySelector('.mini-projects-track');
-            if (miniProjectsTrack) {
-              const trackRect = miniProjectsTrack.getBoundingClientRect();
-              targetX = trackRect.left + (trackRect.width / 2);
-              targetY = trackRect.top + (trackRect.height / 2);
-            }
-          }
-
-          // Smooth transition to fixed snap position
-          trailX += (targetX - trailX) * 0.25;
-          trailY += (targetY - trailY) * 0.25;
-
-          // Snap when close
-          const distance = Math.sqrt((targetX - trailX) ** 2 + (targetY - trailY) ** 2);
-          if (distance < 5) {
-            trailX = targetX;
-            trailY = targetY;
-          }
-        } else {
-          // Not in hover mode: follow the project element
-          const rect = hoveredElement.getBoundingClientRect();
-          // Use custom center if set (for contact options with icon + arrow), otherwise use rect center
+        if (within) {
+          // Use custom center if set (contact options with icon + arrow), else rect center
           let centerX, centerY;
           if (hoveredElement._trailCenterX !== undefined && hoveredElement._trailCenterX !== null) {
             centerX = hoveredElement._trailCenterX;
@@ -3015,17 +2281,20 @@ function PortfolioApp() {
             centerX = rect.left + rect.width / 2;
             centerY = rect.top + rect.height / 2;
           }
-
-          // Stronger magnetic pull for better responsiveness
+          // Magnetic pull toward the element center
           trailX += (centerX - trailX) * 0.25;
           trailY += (centerY - trailY) * 0.25;
 
-          // Ensure trail stays centered on the project
           const distance = Math.sqrt((centerX - trailX) ** 2 + (centerY - trailY) ** 2);
           if (distance < 5) {
             trailX = centerX;
             trailY = centerY;
           }
+        } else {
+          // Pointer left the magnetic field → detach and follow the cursor again.
+          releaseTrail();
+          trailX += (mouseX - trailX) * 0.2;
+          trailY += (mouseY - trailY) * 0.2;
         }
       } else {
         // Normal following behavior with smoother easing
@@ -3071,27 +2340,11 @@ function PortfolioApp() {
         const mouseleaveHandler = (e) => {
           if (!project.isConnected) return; // Guard against removed elements
           debugLog('Major project left:', index);
-
-          // Don't remove shape if we're still in hover mode (another project is hovered)
-          // Use a small delay to let the next mouseenter fire first
-          setTimeout(() => {
-            // Check if we're still hovering any main project OR if hoveredProject state is set
-            const stillOnMainProject = document.querySelector('.project-card:hover');
-            const inHoverMode = document.querySelector('.main-projects.dark-mode');
-
-            if (!stillOnMainProject && !inHoverMode) {
-              isHoveringProject = false;
-              hoveredElement = null;
-              if (trail && trail.isConnected) {
-                trail.classList.remove('magnetic-rectangle');
-              }
-              // Hide cursor label
-              if (label && label.isConnected) {
-                label.classList.remove('visible');
-                label.textContent = '';
-              }
-            }
-          }, 10); // Small delay to allow next mouseenter to fire
+          // Only clear if this card is still the captured element. Moving directly
+          // to an adjacent card fires that card's mouseenter first (setting
+          // hoveredElement to it), so this guard avoids clobbering it. The rAF
+          // proximity check is the backstop for any missed leave during scroll.
+          if (hoveredElement === project) releaseTrail();
         };
 
         project.addEventListener('mouseenter', mouseenterHandler);
@@ -3118,21 +2371,8 @@ function PortfolioApp() {
         const mouseleaveHandler = (e) => {
           if (!project.isConnected) return; // Guard against removed elements
           debugLog('Mini project left:', index);
-
-          // Don't remove shape if we're still in hover mode (another mini project is hovered)
-          setTimeout(() => {
-            // Check if we're still hovering any mini project OR if mini projects section is in dark mode
-            const stillOnMiniProject = document.querySelector('.mini-project-card:hover');
-            const inHoverMode = document.querySelector('.mini-projects-viewport-container.dark-mode');
-
-            if (!stillOnMiniProject && !inHoverMode) {
-              isHoveringProject = false;
-              hoveredElement = null;
-              if (trail && trail.isConnected) {
-                trail.classList.remove('magnetic-square');
-              }
-            }
-          }, 10); // Small delay to allow next mouseenter to fire
+          // Same guarded release as major projects — magnetic, pointer-driven.
+          if (hoveredElement === project) releaseTrail();
         };
 
         project.addEventListener('mouseenter', mouseenterHandler);
@@ -3171,12 +2411,7 @@ function PortfolioApp() {
         const mouseleaveHandler = (e) => {
           if (!audioButton.isConnected) return;
           debugLog('Audio button left');
-          isHoveringProject = false;
-          hoveredElement = null;
-          if (trail && trail.isConnected) {
-            trail.classList.remove('magnetic-audio-button');
-            trail.classList.remove('magnetic-audio-button-rect');
-          }
+          if (hoveredElement === audioButton) releaseTrail();
         };
 
         audioButton.addEventListener('mouseenter', mouseenterHandler);
@@ -3262,25 +2497,11 @@ function PortfolioApp() {
 
         const mouseleaveHandler = () => {
           if (!row.isConnected) return; // Guard against removed elements
-          isHoveringProject = false;
-          hoveredElement = null;
-          // Clear custom center and left
-          if (row._trailCenterX !== undefined) {
-            row._trailCenterX = null;
-          }
-          if (row._trailLeft !== undefined) {
-            row._trailLeft = null;
-          }
-          if (trail && trail.isConnected) {
-            trail.classList.remove('about-rect');
-            // Reset size so other modes can style it
-            trail.style.width = '';
-            trail.style.height = '';
-          }
-          if (label && label.isConnected) {
-            label.classList.remove('visible');
-          }
-          window.__hoveredAboutSection = null;
+          if (hoveredElement !== row) return; // moved straight to another row
+          // Clear row-specific custom center, then fully detach the trail/label.
+          if (row._trailCenterX !== undefined) row._trailCenterX = null;
+          if (row._trailLeft !== undefined) row._trailLeft = null;
+          releaseTrail();
         };
 
         row.addEventListener('mouseenter', mouseenterHandler);
@@ -3366,6 +2587,41 @@ function PortfolioApp() {
         }
       }
     };
+  }, []);
+
+  // Subtle "magnetic" pull on interactive controls (web only — touch has no
+  // hover). Each magnet eases a few px toward the cursor when it is near and
+  // springs back on leave, so buttons/arrows feel alive without ever moving far
+  // enough to disturb the layout (hard-capped at 9px).
+  useEffect(() => {
+    if (window.matchMedia('(hover: none) and (pointer: coarse)').matches) return;
+    const SELECTOR = '.audio-control-button, .project-overlay-close, .about-title-line .arrow-close-widget, .hero-rotate-cue';
+    const RADIUS = 80;     // px halo around an element where the pull begins
+    const STRENGTH = 0.3;  // fraction of the cursor offset applied
+    const BOUND = 9;       // hard cap on how far an element shifts
+    let raf = null;
+    const onMove = (e) => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = null;
+        document.querySelectorAll(SELECTOR).forEach((el) => {
+          const r = el.getBoundingClientRect();
+          if (!r.width) return;
+          const dx = e.clientX - (r.left + r.width / 2);
+          const dy = e.clientY - (r.top + r.height / 2);
+          const near = Math.hypot(dx, dy) < RADIUS + Math.max(r.width, r.height) / 2;
+          if (near) {
+            gsap.to(el, { x: gsap.utils.clamp(-BOUND, BOUND, dx * STRENGTH), y: gsap.utils.clamp(-BOUND, BOUND, dy * STRENGTH), duration: 0.3, ease: 'power3.out', overwrite: 'auto' });
+            el._mag = true;
+          } else if (el._mag) {
+            gsap.to(el, { x: 0, y: 0, duration: 0.5, ease: 'elastic.out(1, 0.4)', overwrite: 'auto' });
+            el._mag = false;
+          }
+        });
+      });
+    };
+    window.addEventListener('pointermove', onMove);
+    return () => { window.removeEventListener('pointermove', onMove); if (raf) cancelAnimationFrame(raf); };
   }, []);
 
   // Track section visits
@@ -3769,31 +3025,6 @@ function PortfolioApp() {
     return isInView;
   };
 
-  // Scroll main-projects section into viewport smoothly
-  const scrollToMainProjects = () => {
-    const mainProjectsSection = document.querySelector('.main-projects');
-    if (!mainProjectsSection) return;
-
-    const rect = mainProjectsSection.getBoundingClientRect();
-    const isInView = rect.top >= 0 && rect.top < window.innerHeight && rect.bottom > 0;
-
-    if (!isInView) {
-      // Calculate target scroll position to align section top with viewport top
-      const targetScrollY = window.scrollY + rect.top;
-
-      gsap.to(window, {
-        scrollTo: { y: targetScrollY },
-        duration: 0.6,
-        ease: "power2.out",
-        onComplete: () => {
-          setIsMainProjectsInView(true);
-        }
-      });
-    } else {
-      setIsMainProjectsInView(true);
-    }
-  };
-
   // Handle project hover with viewport check
   const handleProjectHover = (projectId) => {
     // Don't allow hover when any overlay is open
@@ -3826,84 +3057,12 @@ function PortfolioApp() {
       thirdProjectHoveredFor1sRef.current = false;
     }
 
-    // Only scroll to viewport if not scrolling down past third project
-    // Allow autoscroll when scrolling upward (towards "my work") even if past third project
-    const projectsScrollTrigger = ScrollTrigger.getById('projects-scroll');
-    const isScrollingPastThird = projectsScrollTrigger && projectsScrollTrigger.progress > 0.75 && isScrollingDownRef.current;
-    const isScrollingUpward = isScrollingUpwardRef.current;
-
-    // Don't scroll back up if scrolling down past third project (unless scrolling upward)
-    if (isScrollingPastThird && projectId === 'project3' && !isScrollingUpward) {
-      // Just set hover state without scrolling
-      setHoveredProject(projectId);
-      enforceProjectPointerEvents();
-      return;
-    }
-
-    if (!checkMainProjectsInView()) {
-      // Section not in viewport, scroll to it first
-      const mainProjectsSection = document.querySelector('.main-projects');
-      if (mainProjectsSection) {
-        const rect = mainProjectsSection.getBoundingClientRect();
-        const targetScrollY = window.scrollY + rect.top;
-
-        // Store the project card element and track if cursor is still over it
-        const projectCard = document.querySelector(`.project-card.${projectId === 'cognixa' ? 'red-project' : projectId === 'settlin' ? 'green-project' : 'blue-project'}`);
-        let isStillHovering = false;
-
-        // Track if cursor is still over the card during scroll
-        if (projectCard) {
-          const checkHover = () => {
-            const cardRect = projectCard.getBoundingClientRect();
-            const mouseX = window.mouseX || 0;
-            const mouseY = window.mouseY || 0;
-            return mouseX >= cardRect.left && mouseX <= cardRect.right &&
-              mouseY >= cardRect.top && mouseY <= cardRect.bottom;
-          };
-
-          // Check hover state periodically during scroll
-          const hoverCheckInterval = setInterval(() => {
-            isStillHovering = checkHover();
-            if (!isStillHovering) {
-              clearInterval(hoverCheckInterval);
-            }
-          }, 50);
-
-          // Scroll to section and wait for completion
-          gsap.to(window, {
-            scrollTo: { y: targetScrollY },
-            duration: 0.6,
-            ease: "power2.out",
-            onComplete: () => {
-              clearInterval(hoverCheckInterval);
-              // Verify section is now in viewport
-              checkMainProjectsInView();
-              // Only set hover if cursor is still over the project card
-              if (projectCard && (isStillHovering || checkHover())) {
-                setHoveredProject(projectId);
-                enforceProjectPointerEvents();
-              }
-            }
-          });
-        } else {
-          // If card not found, set hover anyway (fallback)
-          gsap.to(window, {
-            scrollTo: { y: targetScrollY },
-            duration: 0.6,
-            ease: "power2.out",
-            onComplete: () => {
-              checkMainProjectsInView();
-              setHoveredProject(projectId);
-              enforceProjectPointerEvents();
-            }
-          });
-        }
-      }
-    } else {
-      // Section already in viewport, set hover immediately (cursor is already over the project)
-      setHoveredProject(projectId);
-      enforceProjectPointerEvents();
-    }
+    // Hover only sets focus state — it must NOT scroll the page (that was a
+    // hijack: cards slid under the cursor and cascaded into more scrolls).
+    // Scroll position is what drives which project is focused.
+    checkMainProjectsInView();
+    setHoveredProject(projectId);
+    enforceProjectPointerEvents();
   };
 
   // Enforce pointer-events for projects based on centered state and opacity
@@ -3962,109 +3121,11 @@ function PortfolioApp() {
     const lastMiniProjectCard = document.querySelector('.mini-project-card:last-child');
     const isLastMiniProjectCentered = lastMiniProjectCard && lastMiniProjectCard.classList.contains('centered');
 
-    const miniProjectsScrollTrigger = ScrollTrigger.getById('mini-projects-scroll');
-    const isLastMiniProject = projectId === 'conscious-living';
-
-    // Only scroll to viewport if not scrolling down past last mini project
-    // Allow autoscroll when scrolling upward (towards "mini projects") even if past last project
-    const isScrollingPastLast = miniProjectsScrollTrigger && miniProjectsScrollTrigger.progress > 0.83 && isMiniScrollingDownRef.current;
-    const isScrollingUpward = isScrollingUpwardRef.current;
-
-    // Don't scroll back up if scrolling down past last mini project (unless scrolling upward)
-    if (isScrollingPastLast && isLastMiniProject && !isScrollingUpward) {
-      // Just set hover state without scrolling
-      setHoveredMiniProject(projectId);
-      enforceMiniProjectPointerEvents();
-      return;
-    }
-
-    if (!checkMiniProjectsInView()) {
-      // Section not in viewport, scroll to it first
-      const miniProjectsSection = document.querySelector('.mini-projects');
-      if (miniProjectsSection) {
-        const rect = miniProjectsSection.getBoundingClientRect();
-        const targetScrollY = window.scrollY + rect.top;
-
-        // Store the project card element and track if cursor is still over it
-        // Find the card by matching the projectId with the className
-        const projectCardClassMap = {
-          'prism': 'purple-project',
-          'jarvis': 'orange-project',
-          'bloom-bakehouse': 'teal-project',
-          'conscious-living': 'yellow-project'
-        };
-        const projectCard = document.querySelector(`.mini-project-card.${projectCardClassMap[projectId] || ''}`);
-        let isStillHovering = false;
-
-        // Track if cursor is still over the card during scroll
-        if (projectCard) {
-          const checkHover = () => {
-            const cardRect = projectCard.getBoundingClientRect();
-            const mouseX = window.mouseX || 0;
-            const mouseY = window.mouseY || 0;
-            return mouseX >= cardRect.left && mouseX <= cardRect.right &&
-              mouseY >= cardRect.top && mouseY <= cardRect.bottom;
-          };
-
-          // Check hover state periodically during scroll
-          const hoverCheckInterval = setInterval(() => {
-            isStillHovering = checkHover();
-            if (!isStillHovering) {
-              clearInterval(hoverCheckInterval);
-            }
-          }, 50);
-
-          // Scroll to section and wait for completion
-          gsap.to(window, {
-            scrollTo: { y: targetScrollY },
-            duration: 0.6,
-            ease: "power2.out",
-            onComplete: () => {
-              clearInterval(hoverCheckInterval);
-              // Verify section is now in viewport
-              checkMiniProjectsInView();
-              // Only set hover if cursor is still over the project card
-              if (projectCard && (isStillHovering || checkHover())) {
-                setHoveredMiniProject(projectId);
-                enforceMiniProjectPointerEvents();
-                // Show aurora with delay after background turns black
-                setShowMiniAurora(false);
-                setTimeout(() => {
-                  setShowMiniAurora(true);
-                }, 200); // 200ms delay for background to turn black first
-              }
-            }
-          });
-        } else {
-          // If card not found, set hover anyway (fallback)
-          gsap.to(window, {
-            scrollTo: { y: targetScrollY },
-            duration: 0.6,
-            ease: "power2.out",
-            onComplete: () => {
-              checkMiniProjectsInView();
-              setHoveredMiniProject(projectId);
-              enforceMiniProjectPointerEvents();
-              // Show aurora with delay after background turns black
-              setShowMiniAurora(false);
-              setTimeout(() => {
-                setShowMiniAurora(true);
-              }, 200); // 200ms delay for background to turn black first
-            }
-          });
-        }
-      }
-    } else {
-      // Section already in viewport, set hover immediately (cursor is already over the project)
-      setHoveredMiniProject(projectId);
-      // Enforce pointer-events after hover state changes
-      enforceMiniProjectPointerEvents();
-      // Show aurora with delay after background turns black
-      setShowMiniAurora(false);
-      setTimeout(() => {
-        setShowMiniAurora(true);
-      }, 200); // 200ms delay for background to turn black first
-    }
+    // Hover only sets focus state — never scrolls the page (that was a hijack).
+    checkMiniProjectsInView();
+    setHoveredMiniProject(projectId);
+    enforceMiniProjectPointerEvents();
+    setShowMiniAurora(true);
   };
 
   // Enforce pointer-events for mini projects based on centered state and opacity
@@ -4106,93 +3167,9 @@ function PortfolioApp() {
       isScrollingUpwardRef.current = isScrollingUpward;
       lastVerticalScrollYRef.current = currentScrollY;
 
-      // Check if cursor is hovering over third project while scrolling up
-      // Only trigger if not already at third project (progress < 0.95) to avoid conflicts with snap
-      if (isScrollingUpward && !isMagneticScrollingRef.current) {
-        const projectsScrollTrigger = ScrollTrigger.getById('projects-scroll');
-        const currentProgress = projectsScrollTrigger ? projectsScrollTrigger.progress : 0;
-
-        // Only trigger magnetic scroll if we're not already at or past the third project
-        if (currentProgress < 0.95) {
-          const thirdProjectCard = document.querySelector('.project-card.blue-project');
-          if (thirdProjectCard) {
-            const cardRect = thirdProjectCard.getBoundingClientRect();
-            const mouseX = window.mouseX || 0;
-            const mouseY = window.mouseY || 0;
-            const isOverThirdProject = mouseX >= cardRect.left && mouseX <= cardRect.right &&
-              mouseY >= cardRect.top && mouseY <= cardRect.bottom;
-
-            if (isOverThirdProject && hoveredProject !== 'project3') {
-              // Clear any existing timeout
-              if (magneticScrollTimeoutRef.current) {
-                clearTimeout(magneticScrollTimeoutRef.current);
-              }
-
-              // Debounce the magnetic scroll to prevent firing too frequently
-              magneticScrollTimeoutRef.current = setTimeout(() => {
-                // Double-check that we're still hovering and scrolling up
-                if (isScrollingUpwardRef.current && !isMagneticScrollingRef.current) {
-                  // Verify cursor is still over third project before scrolling
-                  const thirdProjectCard = document.querySelector('.project-card.blue-project');
-                  if (thirdProjectCard) {
-                    const cardRect = thirdProjectCard.getBoundingClientRect();
-                    const mouseX = window.mouseX || 0;
-                    const mouseY = window.mouseY || 0;
-                    const isStillOverThirdProject = mouseX >= cardRect.left && mouseX <= cardRect.right &&
-                      mouseY >= cardRect.top && mouseY <= cardRect.bottom;
-
-                    if (isStillOverThirdProject) {
-                      const projectsScrollTrigger = ScrollTrigger.getById('projects-scroll');
-                      if (projectsScrollTrigger) {
-                        isMagneticScrollingRef.current = true;
-
-                        // Calculate scroll position to reach progress = 1.0 (third project centered)
-                        const triggerStart = projectsScrollTrigger.start;
-                        const triggerEnd = projectsScrollTrigger.end;
-                        const scrollDistance = triggerEnd - triggerStart;
-                        const targetScrollY = triggerStart + scrollDistance; // Position for progress = 1.0
-
-                        // Scroll to third project position
-                        gsap.to(window, {
-                          scrollTo: { y: targetScrollY },
-                          duration: 0.6,
-                          ease: "power2.out",
-                          onComplete: () => {
-                            // Only activate hover mode if cursor is still over third project
-                            const finalCardRect = thirdProjectCard.getBoundingClientRect();
-                            const finalMouseX = window.mouseX || 0;
-                            const finalMouseY = window.mouseY || 0;
-                            const isStillHovering = finalMouseX >= finalCardRect.left && finalMouseX <= finalCardRect.right &&
-                              finalMouseY >= finalCardRect.top && finalMouseY <= finalCardRect.bottom;
-
-                            if (isStillHovering) {
-                              setHoveredProject('project3');
-                              enforceProjectPointerEvents();
-                            }
-                            isMagneticScrollingRef.current = false;
-                          }
-                        });
-                      }
-                    }
-                  }
-                }
-              }, 100); // 100ms debounce
-            } else {
-              // Cursor left third project, clear timeout
-              if (magneticScrollTimeoutRef.current) {
-                clearTimeout(magneticScrollTimeoutRef.current);
-                magneticScrollTimeoutRef.current = null;
-              }
-            }
-          }
-        }
-      } else if (!isScrollingUpward) {
-        // If scrolling stopped or changed direction, clear magnetic scroll timeout
-        if (magneticScrollTimeoutRef.current) {
-          clearTimeout(magneticScrollTimeoutRef.current);
-          magneticScrollTimeoutRef.current = null;
-        }
-      }
+      // (Removed: the "magnetic" auto-scroll that yanked the page to the third
+      // project on scroll-up-hover — it generated scroll the user never asked
+      // for. Resting on a project is handled by the Lenis scroll-end snap.)
 
       const wasMainInView = isMainProjectsInView;
       const isMainNowInView = checkMainProjectsInView();
@@ -4289,7 +3266,7 @@ function PortfolioApp() {
             !isScrollingToDifferentMiniProjectRef.current &&
             !isTransitioningRef.current) {
             // Clear main projects hover state
-            if (hoveredProject) {
+            if (hoveredProject && !isMainProjectsInView) {
               setHoveredProject(null);
               // Clear third project hover timer
               if (thirdProjectHoverTimerRef.current) {
@@ -4301,7 +3278,7 @@ function PortfolioApp() {
             }
 
             // Clear mini projects hover state
-            if (hoveredMiniProject) {
+            if (hoveredMiniProject && !isMiniProjectsInView) {
               setHoveredMiniProject(null);
               setShowMiniAurora(false);
             }
@@ -4464,6 +3441,21 @@ function PortfolioApp() {
             </div>
           </div>
         </div>
+
+        {/* Desktop scroll cue — fades on first scroll (class toggled in effect). */}
+        <div className="hero-scroll-cue" aria-hidden="true">
+          <span className="hero-scroll-cue__label">SCROLL</span>
+          <span className="hero-scroll-cue__arrow">↓</span>
+        </div>
+
+        {/* Mobile-only: rotate / tap for fullscreen + sound. */}
+        <button type="button" className="hero-rotate-cue" onClick={handleMobileImmerse} aria-label="Rotate device for fullscreen with sound">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <rect x="3" y="6" width="13" height="12" rx="2" transform="rotate(-12 9.5 12)" />
+            <path d="M19 7a7 7 0 0 1 1.9 5.4M20.5 9l.6 3.2 2.4-1.6" />
+          </svg>
+          <span>Rotate &amp; tap for fullscreen + sound</span>
+        </button>
       </section>
 
       {/* About / Next Screen Wireframe */}
@@ -4506,7 +3498,13 @@ function PortfolioApp() {
       </section>
 
       {/* Main Projects Section with Magnetic Scrolling */}
-      <section className={`main-projects ${hoveredProject && isMainProjectsInView ? 'dark-mode' : ''}`} style={debugMode ? { border: '2px solid red' } : {}}>
+      <section
+        className={`main-projects ${hoveredProject && isMainProjectsInView ? 'dark-mode' : ''}`}
+        style={{
+          ...(debugMode ? { border: '2px solid red' } : {}),
+          ...(hoveredProject && isMainProjectsInView ? { '--project-accent': getProjectColor(hoveredProject) } : {}),
+        }}
+      >
         {hoveredProject && isMainProjectsInView && (
           <div className="light-rays-wrapper">
             <LightRays
@@ -4555,6 +3553,8 @@ function PortfolioApp() {
                 onMouseLeave={() => {
                   // Don't clear hover state if we're transitioning or scrolling to a different project
                   if (isTransitioningRef.current || isScrollingToDifferentProjectRef.current) return;
+                  // Touch/narrow keeps focus on by default (scroll-driven); web clears focus when the cursor leaves to empty space.
+                  if (isTouchOrNarrow()) return;
 
                   const wasThirdProject = hoveredProject === 'project3';
                   setHoveredProject(null);
@@ -4607,6 +3607,8 @@ function PortfolioApp() {
                 onMouseLeave={() => {
                   // Don't clear hover state if we're transitioning or scrolling to a different project
                   if (isTransitioningRef.current || isScrollingToDifferentProjectRef.current) return;
+                  // Touch/narrow keeps focus on by default (scroll-driven); web clears focus when the cursor leaves to empty space.
+                  if (isTouchOrNarrow()) return;
 
                   const wasThirdProject = hoveredProject === 'project3';
                   setHoveredProject(null);
@@ -4659,6 +3661,8 @@ function PortfolioApp() {
                 onMouseLeave={() => {
                   // Don't clear hover state if we're transitioning or scrolling to a different project
                   if (isTransitioningRef.current || isScrollingToDifferentProjectRef.current) return;
+                  // Touch/narrow keeps focus on by default (scroll-driven); web clears focus when the cursor leaves to empty space.
+                  if (isTouchOrNarrow()) return;
 
                   const wasThirdProject = hoveredProject === 'project3';
                   setHoveredProject(null);
@@ -4746,6 +3750,8 @@ function PortfolioApp() {
                   onMouseLeave={() => {
                     // Don't clear hover state if we're transitioning or scrolling to a different project
                     if (isTransitioningRef.current || isScrollingToDifferentMiniProjectRef.current) return;
+                    // Touch/narrow keeps focus on by default (scroll-driven); web clears focus when the cursor leaves to empty space.
+                    if (isTouchOrNarrow()) return;
 
                     setHoveredMiniProject(null);
                     setShowMiniAurora(false);
@@ -4775,6 +3781,8 @@ function PortfolioApp() {
                   onMouseLeave={() => {
                     // Don't clear hover state if we're transitioning or scrolling to a different project
                     if (isTransitioningRef.current || isScrollingToDifferentMiniProjectRef.current) return;
+                    // Touch/narrow keeps focus on by default (scroll-driven); web clears focus when the cursor leaves to empty space.
+                    if (isTouchOrNarrow()) return;
 
                     setHoveredMiniProject(null);
                     setShowMiniAurora(false);
@@ -4804,6 +3812,8 @@ function PortfolioApp() {
                   onMouseLeave={() => {
                     // Don't clear hover state if we're transitioning or scrolling to a different project
                     if (isTransitioningRef.current || isScrollingToDifferentMiniProjectRef.current) return;
+                    // Touch/narrow keeps focus on by default (scroll-driven); web clears focus when the cursor leaves to empty space.
+                    if (isTouchOrNarrow()) return;
 
                     setHoveredMiniProject(null);
                     setShowMiniAurora(false);
@@ -4835,6 +3845,8 @@ function PortfolioApp() {
                   onMouseLeave={() => {
                     // Don't clear hover state if we're transitioning or scrolling to a different project
                     if (isTransitioningRef.current || isScrollingToDifferentMiniProjectRef.current) return;
+                    // Touch/narrow keeps focus on by default (scroll-driven); web clears focus when the cursor leaves to empty space.
+                    if (isTouchOrNarrow()) return;
 
                     setHoveredMiniProject(null);
                     setShowMiniAurora(false);
