@@ -7,7 +7,7 @@ import {
   useMotionValue,
   useVelocity,
   useAnimationFrame
-} from 'motion/react';
+} from 'framer-motion';
 import './ScrollVelocity.css';
 
 function useElementWidth(ref) {
@@ -174,5 +174,3 @@ export const ScrollVelocity = ({
 };
 
 export default ScrollVelocity;
-
-
