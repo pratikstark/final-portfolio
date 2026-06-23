@@ -5,7 +5,11 @@ import App from './App';
 //Import Mixpanel SDK
 import mixpanel from "mixpanel-browser";
 
-// Near entry of your product, init Mixpanel
+// Near entry of your product, init Mixpanel.
+// Deferred to idle time so the analytics SDK (init + session-replay wiring) does
+// not block first paint or compete with the entry animations. Falls back to a
+// near-immediate timeout where requestIdleCallback is unavailable (Safari).
+const initMixpanel = () => {
 try {
   mixpanel.init("5d96be15b728e8689abe73e7fb85f8f1", {
     debug: false, // Set to false to reduce console noise, change to true for debugging
@@ -110,6 +114,14 @@ try {
   }, 100);
 } catch (error) {
   // Mixpanel initialization failed
+}
+};
+
+if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+  window.requestIdleCallback(initMixpanel, { timeout: 3000 });
+} else {
+  // Safari has no requestIdleCallback; defer just past first paint instead.
+  setTimeout(initMixpanel, 1);
 }
 
 // Global error handler to suppress the removeChild error

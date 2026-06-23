@@ -44,6 +44,7 @@ const LightRays = ({
   mouseInfluence = 1,
   noiseAmount = 0.0,
   distortion = 0.0,
+  paused = false,
   className = ''
 }) => {
   const containerRef = useRef(null);
@@ -56,6 +57,11 @@ const LightRays = ({
   const cleanupFunctionRef = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
   const observerRef = useRef(null);
+  // Warm-mount: when `paused` the render loop keeps running (context stays warm)
+  // but skips the draw call, so toggling paused shows/hides instantly with no
+  // WebGL rebuild. Read via a ref so the long-lived loop sees live updates.
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -94,7 +100,7 @@ const LightRays = ({
       if (!containerRef.current) return;
 
       const renderer = new Renderer({
-        dpr: Math.min(window.devicePixelRatio, 2),
+        dpr: Math.min(window.devicePixelRatio, 1.5),
         alpha: true
       });
       rendererRef.current = renderer;
@@ -243,7 +249,7 @@ void main() {
       const updatePlacement = () => {
         if (!containerRef.current || !renderer) return;
 
-        renderer.dpr = Math.min(window.devicePixelRatio, 2);
+        renderer.dpr = Math.min(window.devicePixelRatio, 1.5);
 
         const { clientWidth: wCSS, clientHeight: hCSS } = containerRef.current;
         renderer.setSize(wCSS, hCSS);
@@ -276,7 +282,9 @@ void main() {
         }
 
         try {
-          renderer.render({ scene: mesh });
+          if (!pausedRef.current) {
+            renderer.render({ scene: mesh });
+          }
           animationIdRef.current = requestAnimationFrame(loop);
         } catch (error) {
           return;
@@ -329,21 +337,12 @@ void main() {
         cleanupFunctionRef.current = null;
       }
     };
-  }, [
-    isVisible,
-    raysOrigin,
-    raysColor,
-    raysSpeed,
-    lightSpread,
-    rayLength,
-    pulsating,
-    fadeDistance,
-    saturation,
-    followMouse,
-    mouseInfluence,
-    noiseAmount,
-    distortion
-  ]);
+    // Only (re)build the WebGL context when visibility flips. Every live prop
+    // (raysColor, raysSpeed, lightSpread, rayLength, raysOrigin, …) is pushed
+    // as a uniform update by the effect below, so a hover-driven colour change
+    // no longer tears down and rebuilds the shader — that rebuild was the
+    // visible hover "hitch".
+  }, [isVisible]);
 
   useEffect(() => {
     if (!uniformsRef.current || !containerRef.current || !rendererRef.current) return;

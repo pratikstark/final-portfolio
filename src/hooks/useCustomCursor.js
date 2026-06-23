@@ -57,6 +57,7 @@ export const useCustomCursor = () => {
       cursor.style.top = mouseY + 'px';
     };
 
+    let trailAnimationId = 0;
     const animateTrail = () => {
       // Only animate the trail if it's not locked to a project
       if (!trail.classList.contains('is-locked')) {
@@ -65,15 +66,20 @@ export const useCustomCursor = () => {
         trail.style.left = trailX + 'px';
         trail.style.top = trailY + 'px';
       }
-      requestAnimationFrame(animateTrail);
+      trailAnimationId = requestAnimationFrame(animateTrail);
     };
 
-    animateTrail();
+    trailAnimationId = requestAnimationFrame(animateTrail);
     document.addEventListener('mousemove', handleMouseMove);
 
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
-      
+
+      // Cancel the trail's RAF loop so it doesn't keep running (and leaking a
+      // reference to the hidden trail element) after unmount — previously it was
+      // never cancelled and ran forever across route changes.
+      cancelAnimationFrame(trailAnimationId);
+
       // Reset the cursor creation flag
       cursorCreatedRef.current = false;
       

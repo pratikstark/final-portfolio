@@ -1,13 +1,14 @@
-import React, { useLayoutEffect } from 'react';
+import React, { useLayoutEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import ErrorBoundary from './ErrorBoundary';
 import './App.css';
 
-// Import demo pages
-import TextPressureDemo from './pages/TextPressureDemo';
-import VerticalCutRevealDemo from './pages/VerticalCutRevealDemo';
+// Import demo pages — lazy-loaded so their code is code-split out of the main
+// bundle (the portfolio home route no longer downloads them up front).
+const TextPressureDemo = lazy(() => import('./pages/TextPressureDemo'));
+const VerticalCutRevealDemo = lazy(() => import('./pages/VerticalCutRevealDemo'));
 
 // Import the main portfolio component
 import PortfolioApp from './App_portfolio';
@@ -75,11 +76,13 @@ function AppRoutes() {
   // Key changes with pathname - forces React to completely destroy and recreate the Routes tree
   // This prevents React from trying to diff the old and new components, which causes the removeChild error
   return (
-    <Routes key={location.pathname}>
-      <Route path="/" element={<PortfolioApp key="portfolio" />} />
-      <Route path="/text-pressure-demo" element={<TextPressureDemo key="text-pressure-demo" />} />
-      <Route path="/vertical-cut-reveal-demo" element={<VerticalCutRevealDemo key="vertical-cut-reveal-demo" />} />
-    </Routes>
+    <Suspense fallback={null}>
+      <Routes key={location.pathname}>
+        <Route path="/" element={<PortfolioApp key="portfolio" />} />
+        <Route path="/text-pressure-demo" element={<TextPressureDemo key="text-pressure-demo" />} />
+        <Route path="/vertical-cut-reveal-demo" element={<VerticalCutRevealDemo key="vertical-cut-reveal-demo" />} />
+      </Routes>
+    </Suspense>
   );
 }
 

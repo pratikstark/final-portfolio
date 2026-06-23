@@ -19,11 +19,18 @@ html.lenis {
   pointer-events: none;
 }
 
-/* Hide default cursor globally */
-html,
-body,
-* {
-  cursor: none !important;
+/* Hide the native cursor only where the custom cursor is allowed to exist. */
+@media (min-width: 901px) and (hover: hover) and (pointer: fine) {
+  html,
+  body,
+  * {
+    cursor: none !important;
+  }
+}
+
+body.touch-device,
+body.touch-device * {
+  cursor: auto !important;
 }
 
 /* Ensure custom cursor is visible on all elements */
@@ -359,6 +366,17 @@ body {
   --text-6xl: clamp(3.75rem, 3rem + 3.75vw, 5rem);
   --text-7xl: clamp(4.5rem, 3.5rem + 5vw, 6rem);
   --text-8xl: clamp(6rem, 4.5rem + 7.5vw, 8rem);
+
+  /* ===== CENTRAL TYPE SCALE — the single source of truth =====
+     One small, semantic set of sizes. Every one is fluid (clamp: phone-min →
+     desktop-max) so it is responsive at every viewport with no per-component
+     vh/px overrides. Use ONLY these for content typography across all sections. */
+  --fs-display: clamp(2.75rem, 1.55rem + 6vw, 5rem);          /* 44 → 80px · section headlines (MY WORK, THINGS I DO) */
+  --fs-heading: clamp(1.5rem, 1.05rem + 2.25vw, 2.5rem);      /* 24 → 40px · large sub-headings */
+  --fs-title:   clamp(1rem, 0.93rem + 0.35vw, 1.125rem);      /* 16 → 18px · card titles */
+  --fs-body:    clamp(0.8125rem, 0.75rem + 0.3vw, 0.9375rem); /* 13 → 15px · body, descriptions, subtitles */
+  --fs-label:   clamp(0.75rem, 0.72rem + 0.16vw, 0.8125rem);  /* 12 → 13px · small labels / meta / list items */
+  --fs-caption: clamp(0.6875rem, 0.64rem + 0.2vw, 0.8125rem);  /* 11 → 13px · mono captions (OUTCOMES/LEARNINGS) */
 
   /* Colors */
   --color-text-primary: #111111;
@@ -1738,6 +1756,14 @@ body.debug-mode::after {
   height: 100%;
   z-index: 0;
   pointer-events: none;
+  /* Warm-mounted: kept in the DOM and toggled via opacity with no transition,
+     so it appears/disappears instantly exactly like the previous conditional
+     mount. The WebGL context stays warm; it only renders while .light-rays-active. */
+  opacity: 0;
+}
+
+.light-rays-wrapper.light-rays-active {
+  opacity: 1;
 }
 
 .aurora-wrapper {
@@ -1751,7 +1777,9 @@ body.debug-mode::after {
   pointer-events: none;
   overflow: hidden;
   opacity: 0;
-  transition: opacity 0.4s ease;
+  /* No opacity transition: the enter fade is driven by the auroraFadeIn
+     animation on .aurora-staggered, and leave must be instant to match the
+     previous mount/unmount behaviour exactly now that it is warm-mounted. */
 }
 
 .aurora-wrapper.aurora-staggered {
@@ -1799,7 +1827,7 @@ body.debug-mode::after {
 
 .main-projects-title {
   font-family: var(--font-heading);
-  font-size: var(--text-6xl);
+  font-size: var(--fs-display);
   font-weight: var(--font-weight-medium) !important;
   color: var(--color-text-primary);
   margin: 0;
@@ -1843,7 +1871,7 @@ body.debug-mode::after {
 
 .work-summary-title {
   font-family: var(--font-body);
-  font-size: var(--text-sm);
+  font-size: var(--fs-caption);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   margin: 0 0 clamp(8px, 1.5vw, 12px) 0;
@@ -1865,7 +1893,7 @@ body.debug-mode::after {
 
 .work-summary-list li {
   font-family: var(--font-body);
-  font-size: var(--text-sm);
+  font-size: var(--fs-body);
   font-weight: var(--font-weight-normal);
   color: var(--color-text-primary);
   line-height: var(--line-height-normal);
@@ -1902,7 +1930,7 @@ body.debug-mode::after {
 /* OUTCOMES / LEARNINGS — mono caption with project-accent tick */
 .main-projects.dark-mode .work-summary-title {
   font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-size: var(--fs-caption);
   font-weight: 500;
   letter-spacing: 0.16em;
   display: flex;
@@ -2112,9 +2140,10 @@ body.debug-mode::after {
   background-color: transparent;
   position: relative;
   overflow: hidden;
-  /* Optimize for GPU acceleration */
+  /* Optimize for GPU acceleration. translateZ already promotes this to its own
+     layer for the thumbnail crossfade; will-change: contents was a redundant
+     compositor hint (the crossfade animates child opacity, not contents). */
   transform: translateZ(0);
-  will-change: contents;
 }
 
 .red-project .project-rectangle .project-thumbnail,
@@ -2169,18 +2198,20 @@ body.debug-mode::after {
   background-color: transparent;
   position: relative;
   overflow: hidden;
-  /* Optimize for GPU acceleration */
+  /* Optimize for GPU acceleration. translateZ already promotes this to its own
+     layer for the thumbnail crossfade; will-change: contents was a redundant
+     compositor hint (the crossfade animates child opacity, not contents). */
   transform: translateZ(0);
-  will-change: contents;
 }
 
 .blue-project .project-rectangle {
   background-color: transparent;
   position: relative;
   overflow: hidden;
-  /* Optimize for GPU acceleration */
+  /* Optimize for GPU acceleration. translateZ already promotes this to its own
+     layer for the thumbnail crossfade; will-change: contents was a redundant
+     compositor hint (the crossfade animates child opacity, not contents). */
   transform: translateZ(0);
-  will-change: contents;
 }
 
 .project-info {
@@ -2206,8 +2237,7 @@ body.debug-mode::after {
 }
 
 .project-title {
-  font-size: 16px;
-  /* Reduced from 18px */
+  font-size: var(--fs-title);
   font-weight: 600;
   /* Reduced from 800 */
   color: #111;
@@ -2321,8 +2351,8 @@ body.debug-mode::after {
 }
 
 .project-subtitle {
-  font-family: Montserrat;
-  font-size: 14px;
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
   font-weight: 400;
   color: #555;
   line-height: 1.4;
@@ -2338,18 +2368,20 @@ body.debug-mode::after {
    stacked composition always switch on together (no desktop-hover layout with
    touch focus in the 769–900 gap). */
 @media (max-width: 900px) {
-  /* Mobile/tablet focus = a type-first vertical composition that fits one viewport
-     with NO overlap: header → title + subtitle → thumbnail → outcomes / learnings.
-     The summary is taken out of absolute flow and given the remaining height. */
+  /* Mobile/tablet focus mirrors the WEB reading order, linearized into one column:
+     MY WORK. → OUTCOMES / LEARNINGS → the project card (thumbnail on top, then the
+     title + subtitle on the left with the ↗ arrow on the right). Left-aligned, just
+     like the desktop composition — the card/thumbnail sits at the BOTTOM, below the
+     summary, exactly as it does on the web. */
   .main-projects {
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    justify-content: center;
-    /* Center the whole composition in the viewport so it never hugs the top with
-       dead space at the bottom (needs the summary to be flex:0 0 auto, below). */
-    padding: clamp(34px, 5.5vh, 52px) clamp(14px, 4vw, 22px) clamp(16px, 2.6vh, 26px);
-    gap: clamp(10px, 1.8vh, 20px);
+    /* header pinned at the TOP; the card is sent to the bottom via margin-top:auto
+       on .projects-container — matches the web (MY WORK top-left, project bottom). */
+    justify-content: flex-start;
+    padding: clamp(30px, 5vh, 48px) clamp(16px, 5vw, 28px) clamp(20px, 3vh, 30px);
+    gap: clamp(12px, 2vh, 22px);
   }
 
   .main-projects-header {
@@ -2358,16 +2390,54 @@ body.debug-mode::after {
     flex: 0 0 auto;
   }
 
-  .main-projects-title {
-    font-size: var(--text-4xl);
-  }
+  /* MY WORK. sizing comes from the central --fs-display token (base rule). */
 
-  /* Project card region — centered thumbnail + title + subtitle */
-  .projects-container {
+  /* OUTCOMES / LEARNINGS — directly under MY WORK., ABOVE the card (web order).
+     STACKED top-to-bottom on mobile (OUTCOMES then LEARNINGS) per the user — a
+     single column, not the web's side-by-side pair. */
+  .work-summary {
+    position: static;
     order: 1;
     flex: 0 0 auto;
+    min-height: 0;
+    top: auto;
+    left: auto;
+    right: auto;
+    width: 100%;
+    grid-template-columns: 1fr;
+    row-gap: clamp(10px, 1.8vh, 18px);
+    transform: none;
+    align-content: start;
+  }
+
+  .work-summary-title {
+    margin-bottom: clamp(4px, 0.8vh, 8px);
+  }
+
+  .work-summary-list {
+    gap: clamp(3px, 0.7vh, 7px);
+  }
+
+  .work-summary-list li {
+    line-height: 1.34;
+    padding-left: 0;
+  }
+
+  .main-projects.dark-mode .work-summary {
+    padding-top: clamp(12px, 1.8vh, 20px);
+  }
+
+  /* The project card — at the BOTTOM, below the summary, mirroring the web card:
+     thumbnail on top, then title + subtitle (left) with the arrow (right). */
+  .projects-container {
+    order: 2;
+    flex: 0 0 auto;
     height: auto;
+    /* push the card to the BOTTOM so MY WORK + summary stay at the top and the
+       free space lands between the summary and the thumbnail (web behaviour). */
+    margin-top: auto;
     align-items: center;
+    /* card is centered in the column; its own content stays left-aligned */
     justify-content: center;
   }
 
@@ -2376,84 +2446,40 @@ body.debug-mode::after {
     height: auto;
   }
 
+  /* Left-aligned card content, exactly like the web (image left edge = text left edge) */
   .project-card,
   .project-card-link {
-    align-items: center;
+    align-items: flex-start;
   }
 
   .project-card {
-    text-align: center;
+    text-align: left;
   }
 
-  /* Type-first composition: title + subtitle lead, thumbnail sits BELOW them
-     (order:1) so the image is no longer jammed at the very top. */
+  /* Thumbnail on top (natural DOM order) — a proper hero image, 2:1, width-fit to phone */
   .project-rectangle {
-    order: 1;
-    width: clamp(150px, 44vw, 188px);
-    height: clamp(86px, 13vh, 120px);
-    margin-top: clamp(10px, 1.8vh, 18px);
+    width: min(86vw, 440px);
+    height: auto;
+    aspect-ratio: 2 / 1;
+    margin: 0;
   }
 
+  /* Title + subtitle below the image; right padding leaves room for the arrow */
   .project-info {
-    order: 0;
-    margin-top: 0;
-    padding-right: 0;
-    align-items: center;
-    text-align: center;
-    max-width: min(82vw, 360px);
+    margin-top: clamp(8px, 1.4vh, 14px);
+    align-items: flex-start;
+    text-align: left;
+    width: min(86vw, 440px);
+    max-width: min(86vw, 440px);
+    padding-right: clamp(46px, 14vw, 64px);
     gap: clamp(3px, 0.8vh, 6px);
   }
 
-  .project-title {
-    font-size: clamp(16px, 2.2vh, 20px);
-    font-weight: 500;
-  }
+  /* .project-title / .project-subtitle sizes come from the central tokens. */
 
-  .project-subtitle {
-    font-size: clamp(11px, 1.5vh, 13px);
-    max-width: min(80vw, 340px);
-  }
-
-  /* The whole .project-card is tappable (onClick → openOverlay). The floating
-     absolute arrow (right:0) read "too wide" beside centered text — drop it on mobile. */
+  /* Arrow restored — kept on the right of the info block, like the web */
   .project-arrow {
-    display: none;
-  }
-
-  /* Outcomes / Learnings — fills remaining height, fluid so it fits short phones */
-  .work-summary {
-    position: static;
-    order: 2;
-    flex: 0 0 auto;
-    /* natural height so .main-projects can center the whole stack (not grow to fill) */
-    min-height: 0;
-    top: auto;
-    left: auto;
-    right: auto;
-    width: 100%;
-    grid-template-columns: 1fr;
-    gap: clamp(8px, 1.4vh, 16px);
-    transform: none;
-    align-content: start;
-  }
-
-  .work-summary-title {
-    font-size: clamp(9px, 1.2vh, 11px);
-    margin-bottom: clamp(3px, 0.7vh, 7px);
-  }
-
-  .work-summary-list {
-    gap: clamp(2px, 0.6vh, 6px);
-  }
-
-  .work-summary-list li {
-    font-size: clamp(10px, 1.35vh, 13px);
-    line-height: 1.32;
-    padding-left: 0;
-  }
-
-  .main-projects.dark-mode .work-summary {
-    padding-top: clamp(10px, 1.6vh, 18px);
+    width: clamp(44px, 13vw, 60px) !important;
   }
 
   /* legacy hover-content (unused in the current focus model) */
@@ -2469,6 +2495,46 @@ body.debug-mode::after {
   .hover-box-1,
   .hover-box-2 {
     transform: translateY(0);
+  }
+}
+
+/* Short phones: the stacked (single-column) Outcomes/Learnings summary is tall,
+   so on shorter viewports (real phone viewport once the browser toolbar is
+   subtracted) compress the gaps and the hero thumbnail just enough that the
+   whole stack — header → Outcomes → Learnings → thumbnail → title/subtitle —
+   still fits one screen without clipping the card. Tall phones (>812h) keep the
+   roomier composition. The stack ORDER and single-column summary are unchanged. */
+@media (max-width: 900px) and (max-height: 812px) {
+  .main-projects {
+    padding-top: clamp(16px, 2.4vh, 30px);
+    padding-bottom: clamp(12px, 2vh, 24px);
+    gap: clamp(8px, 1.2vh, 16px);
+  }
+
+  .work-summary {
+    row-gap: clamp(7px, 1.1vh, 14px);
+  }
+
+  .work-summary-list {
+    gap: clamp(3px, 0.6vh, 6px);
+  }
+
+  .work-summary-list li {
+    line-height: 1.3;
+  }
+
+  .main-projects.dark-mode .work-summary {
+    padding-top: clamp(8px, 1.2vh, 14px);
+  }
+
+  /* Keep the thumbnail full width (left edge aligns with the text, like the web)
+     but make it a shorter, wider banner so the card fits a short screen. */
+  .project-rectangle {
+    aspect-ratio: 11 / 4;
+  }
+
+  .project-info {
+    margin-top: clamp(6px, 1vh, 12px);
   }
 }
 
@@ -2504,7 +2570,7 @@ body.debug-mode::after {
 
 .mini-projects-title {
   font-family: var(--font-heading);
-  font-size: var(--text-6xl);
+  font-size: var(--fs-display);
   font-weight: var(--font-weight-medium) !important;
   color: var(--color-text-primary);
   margin: 0;
@@ -2760,7 +2826,7 @@ body.debug-mode::after {
 }
 
 .mini-project-title {
-  font-size: 16px;
+  font-size: var(--fs-title);
   font-weight: 700;
   color: #111;
   margin: 0 0 2px 0;
@@ -2771,7 +2837,7 @@ body.debug-mode::after {
 
 .mini-project-subtitle {
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: var(--fs-label);
   color: #666;
   margin: 0;
   line-height: 1.4;
@@ -2787,7 +2853,7 @@ body.debug-mode::after {
   left: 50%;
   transform: translateX(-50%);
   font-family: var(--font-body);
-  font-size: 15px;
+  font-size: var(--fs-body);
   color: #333;
   margin: 0;
   margin-top: 12px;
@@ -2824,11 +2890,20 @@ body.debug-mode::after {
     padding: clamp(26px, 4.6vh, 44px) clamp(14px, 4vw, 22px) clamp(4px, 1.2vh, 12px);
   }
 
-  /* Smaller so "THINGS I DO WHEN" / "I CANT SIT STILL" both stay on one line
-     and never clip at 320–430px wide. */
+  /* Bigger brutalist headline — uses the central --fs-display token (base rule),
+     so it scales up on mobile and the longer copy naturally wraps to more lines. */
   .mini-projects-title {
-    font-size: clamp(18px, 5.3vw, 32px);
-    line-height: 1.08;
+    line-height: 1.04;
+  }
+
+  /* Drop the desktop hard break + inline-block stagger so the bigger headline
+     wraps into clean, even lines (THINGS I DO / WHEN I CANT / SIT STILL). */
+  .mini-projects-title br {
+    display: none;
+  }
+
+  .mini-projects-title .mini-projects-title-second-line {
+    display: inline;
   }
 
   .mini-projects-viewport-container {
@@ -2853,9 +2928,10 @@ body.debug-mode::after {
     padding: 0 clamp(20px, 8vw, 44px);
   }
 
+  /* Smaller logo so the focus card reads as refined, not oversized */
   .mini-project-rectangle {
-    width: clamp(112px, 30vw, 150px);
-    height: clamp(112px, 30vw, 150px);
+    width: clamp(76px, 21vw, 108px);
+    height: clamp(76px, 21vw, 108px);
   }
 
   .mini-project-info {
@@ -2864,28 +2940,38 @@ body.debug-mode::after {
   }
 
   /* Description flows INLINE under the logo/title (not absolute → not below the
-     fold) and is shown for the focused .centered card on touch. */
-  .mini-project-card .mini-project-body {
+     fold). ON by default for EVERY card on touch/narrow — a permanent "hover"
+     state — so ALL mini-project descriptions are available, not just the
+     scroll-focused .centered one. The .mini-projects-wrapper prefix lifts this
+     to (0,3,0) so it beats the desktop `.hovered`/`:hover` reveal too, keeping
+     one consistent expanded height across every card. */
+  .mini-projects-wrapper .mini-project-card .mini-project-body {
     position: static;
     transform: none;
     left: auto;
     width: min(86vw, 420px);
     max-width: 86vw;
     margin: clamp(8px, 1.4vh, 14px) auto 0;
-    font-size: clamp(12px, 1.6vh, 14px);
     line-height: 1.5;
-  }
-
-  .mini-projects-wrapper .mini-project-card.centered .mini-project-body {
     opacity: 1;
     max-height: clamp(150px, 28vh, 230px);
     pointer-events: auto;
   }
 
-  .mini-projects-wrapper .mini-project-card:not(.centered) .mini-project-body {
-    opacity: 0;
-    max-height: 0;
-    margin-top: 0;
+  /* Keep EVERY card fully visible on touch/narrow — override the dark-mode
+     focus-hide and the centered-dimming so non-focused cards aren't faded out
+     and their descriptions read as you swipe. Selectors mirror those rules
+     exactly (equal specificity) and win on source order. Pointer-events are
+     intentionally left to the existing centered-only logic, so only the card
+     in focus stays tappable (no edge mis-taps). */
+  .mini-projects-viewport-container.dark-mode .mini-projects-track .mini-projects-wrapper .mini-project-card:not(.hovered):not(.scrolling):not(.centered),
+  .mini-projects-viewport-container.dark-mode .mini-projects-track .mini-projects-wrapper .mini-project-card.purple-project:not(.hovered):not(.scrolling):not(.centered),
+  .mini-projects-viewport-container.dark-mode .mini-projects-track .mini-projects-wrapper .mini-project-card.orange-project:not(.hovered):not(.scrolling):not(.centered),
+  .mini-projects-viewport-container.dark-mode .mini-projects-track .mini-projects-wrapper .mini-project-card.teal-project:not(.hovered):not(.scrolling):not(.centered),
+  .mini-projects-viewport-container.dark-mode .mini-projects-track .mini-projects-wrapper .mini-project-card.yellow-project:not(.hovered):not(.scrolling):not(.centered),
+  .mini-projects-wrapper:has(.mini-project-card.centered) .mini-project-card:not(.centered):not(.scrolling):not(.hovered) {
+    opacity: 1 !important;
+    transform: translateY(0) scale(1) !important;
   }
 }
 

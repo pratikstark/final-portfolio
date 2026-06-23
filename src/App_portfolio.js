@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Volume2, VolumeX } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { gsap } from 'gsap';
@@ -23,11 +23,20 @@ import closeSvg from './assets/close.svg';
 // Global debug state
 let globalDebugMode = false;
 
+const hasTouchInput = () =>
+  typeof window !== 'undefined' &&
+  ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+
+// Custom cursor and hover-driven magnetic effects are desktop-only. Touch-capable
+// devices can synthesize mouseenter on tap, so they must not opt into this path.
+const canUseHoverCursor = () =>
+  typeof window !== 'undefined' &&
+  !hasTouchInput() &&
+  window.matchMedia('(min-width: 901px) and (hover: hover) and (pointer: fine)').matches;
+
 // True on touch devices / narrow viewports — used to give mobile its own hero
 // treatment (no desktop pin/shrink) and other touch-appropriate behaviour.
-const isTouchOrNarrow = () =>
-  typeof window !== 'undefined' &&
-  window.matchMedia('(max-width: 900px), (hover: none) and (pointer: coarse)').matches;
+const isTouchOrNarrow = () => !canUseHoverCursor();
 
 // Store original console methods
 
@@ -102,7 +111,9 @@ try {
 }
 
 // Simple Arrow Widget for Projects - fills on hover
-function ProjectArrow() {
+// memo: these icons render large static SVG paths and receive stable props, so
+// they must not re-run on every hover-driven re-render of PortfolioApp.
+const ProjectArrow = memo(function ProjectArrow() {
   return (
     <span className="project-arrow">
       <span className="project-arrow-base">
@@ -136,10 +147,10 @@ function ProjectArrow() {
       </span>
     </span>
   );
-}
+});
 
 // Arrow/Close Widget Component - fills from bottom synchronized with text
-function ArrowCloseWidget({ sectionName, isActive = false }) {
+const ArrowCloseWidget = memo(function ArrowCloseWidget({ sectionName, isActive = false }) {
   return (
     <span className="arrow-close-widget">
       <span className="arrow-close-base">
@@ -209,10 +220,10 @@ function ArrowCloseWidget({ sectionName, isActive = false }) {
       </span>
     </span>
   );
-}
+});
 
 // Morphing SVG component that contains both arrow and close paths
-function MorphingIcon({ className = '', isClose = false, filled = false, sectionName = '' }) {
+const MorphingIcon = memo(function MorphingIcon({ className = '', isClose = false, filled = false, sectionName = '' }) {
   const arrowId = `arrow-${sectionName}`;
   const closeId = `close-${sectionName}`;
   const morphId = `morph-${sectionName}`;
@@ -246,10 +257,10 @@ function MorphingIcon({ className = '', isClose = false, filled = false, section
       />
     </svg>
   );
-}
+});
 
 // SVG Components for the main titles with fillable animations
-function PsychologyIcon({ className = '' }) {
+const PsychologyIcon = memo(function PsychologyIcon({ className = '' }) {
   return (
     <div className={`category-svg ${className}`}>
       <svg viewBox="0 0 824 97" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -268,7 +279,7 @@ function PsychologyIcon({ className = '' }) {
       </svg>
     </div>
   );
-}
+});
 
 // Import PNG assets
 import emailImg from './assets/email.png';
@@ -276,7 +287,7 @@ import scheduleImg from './assets/schedule.png';
 import messageImg from './assets/message.png';
 
 // Contact Icon Components using PNG assets
-function EmailIcon({ className = '' }) {
+const EmailIcon = memo(function EmailIcon({ className = '' }) {
   debugLog('🔍 EmailIcon rendering, image path:', emailImg);
   return (
     <div className={`category-svg ${className}`}>
@@ -298,9 +309,9 @@ function EmailIcon({ className = '' }) {
       />
     </div>
   );
-}
+});
 
-function ScheduleIcon({ className = '' }) {
+const ScheduleIcon = memo(function ScheduleIcon({ className = '' }) {
   return (
     <div className={`category-svg ${className}`}>
       <img
@@ -317,9 +328,9 @@ function ScheduleIcon({ className = '' }) {
       />
     </div>
   );
-}
+});
 
-function MessageIcon({ className = '' }) {
+const MessageIcon = memo(function MessageIcon({ className = '' }) {
   return (
     <div className={`category-svg ${className}`}>
       <img
@@ -336,9 +347,9 @@ function MessageIcon({ className = '' }) {
       />
     </div>
   );
-}
+});
 
-function DesignIcon({ className = '' }) {
+const DesignIcon = memo(function DesignIcon({ className = '' }) {
   return (
     <div className={`category-svg ${className}`}>
       <svg viewBox="0 0 434 97" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -357,9 +368,9 @@ function DesignIcon({ className = '' }) {
       </svg>
     </div>
   );
-}
+});
 
-function CodeIcon({ className = '' }) {
+const CodeIcon = memo(function CodeIcon({ className = '' }) {
   return (
     <div className={`category-svg ${className}`}>
       <svg viewBox="0 0 335 97" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -378,7 +389,7 @@ function CodeIcon({ className = '' }) {
       </svg>
     </div>
   );
-}
+});
 
 // Main portfolio component - ONLY renders on homepage
 function PortfolioApp() {
@@ -418,25 +429,32 @@ function PortfolioApp() {
     'pravah': { setter: setShowPravahOverlay, getter: showPravahOverlay }
   };
   
-  // Sync URL hash with overlay state
+  // Sync URL hash -> overlay state (deep links + browser back/forward).
+  //
+  // This effect must react ONLY to the hash changing — never to the overlay
+  // booleans. openOverlay() sets the overlay state AND calls navigate('#slug'),
+  // and React commits the state change one render BEFORE react-router's
+  // location.hash catches up. If this effect also depended on the overlay
+  // booleans, it would fire on that intermediate render while location.hash is
+  // still the stale previous value (""), fall into the `!hash` branch, and close
+  // every overlay — so a freshly opened project would flash shut and the carousel
+  // behind it would flick back to the first mini project before the correct
+  // overlay re-opened. Depending on location.hash alone keeps the effect a clean
+  // URL -> state sync. Setters are idempotent (React bails out on an unchanged
+  // value), so we call them unconditionally instead of reading the stale getters.
   useEffect(() => {
     const hash = location.hash.slice(1); // Remove the # symbol
     const project = projectSlugMap[hash];
-    
+
     if (hash && project) {
-      // Open overlay if URL has hash and overlay is not already open
-      if (!project.getter) {
-        project.setter(true);
-      }
+      // Open the overlay that matches the URL hash.
+      project.setter(true);
     } else if (!hash) {
-      // Close all overlays if no hash
-      Object.values(projectSlugMap).forEach(({ getter, setter }) => {
-        if (getter) {
-          setter(false);
-        }
-      });
+      // No hash -> ensure every overlay is closed.
+      Object.values(projectSlugMap).forEach(({ setter }) => setter(false));
     }
-  }, [location.hash, showPrismOverlay, showCognixaOverlay, showSettlinOverlay, showDataVizOverlay, showMobileAppOverlay, showAIChatOverlay, showPravahOverlay]);
+    // Intentionally depends on location.hash only — see comment above.
+  }, [location.hash]);
   
   // Helper function to open overlay with URL update
   const openOverlay = (projectSlug) => {
@@ -925,14 +943,16 @@ function PortfolioApp() {
         document.body.style.overflow = originalOverflow;
         window.removeEventListener('keydown', handleEscape);
         // Resume smooth scroll and snap the homepage back to the exact position the
-        // user left from (refresh first so pinned offsets are current, then restore).
-        ScrollTrigger.refresh();
+        // user left from, THEN refresh. Order matters: the pinned project carousels
+        // reposition in onRefresh from the current scroll progress, so scroll must be
+        // restored before the refresh — otherwise they'd reset to the first card.
         if (lenis) {
           lenis.start();
           lenis.scrollTo(overlayScrollRef.current, { immediate: true });
         } else {
           window.scrollTo(0, overlayScrollRef.current);
         }
+        ScrollTrigger.refresh();
       };
     }
   }, [anyOverlayOpen]);
@@ -1029,8 +1049,11 @@ function PortfolioApp() {
 
     window.addEventListener('beforeunload', handleBeforeUnload);
 
-    // Disable scrolling initially only during loader
+    // Disable scrolling initially only during loader. Lenis hijacks wheel/touch
+    // independently of body overflow, so stop it too — otherwise the loading
+    // screen still scrolls on wheel/trackpad.
     document.body.style.overflow = 'hidden';
+    window.__lenis?.stop();
 
     const loader = loaderRef.current;
     const loadingBar = loadingBarRef.current;
@@ -1057,6 +1080,7 @@ function PortfolioApp() {
 
             // Re-enable scrolling after loader finishes
             document.body.style.overflow = 'auto';
+            window.__lenis?.start();
             debugLog('Scrolling re-enabled');
           }
         }
@@ -1075,6 +1099,7 @@ function PortfolioApp() {
           debugLog('Video play error (fallback):', e);
         });
         document.body.style.overflow = 'auto';
+        window.__lenis?.start();
         debugLog('Scrolling re-enabled (fallback)');
       }, 100);
     }
@@ -1088,6 +1113,7 @@ function PortfolioApp() {
         debugLog('Loader force-hidden');
       }
       document.body.style.overflow = 'auto';
+      window.__lenis?.start();
     }, 5000);
 
     // Additional scroll reset after a short delay to ensure it takes effect
@@ -1662,10 +1688,15 @@ function PortfolioApp() {
           onEnterBack: () => setIsMainProjectsInView(true),
           onLeave: clearActive,
           onLeaveBack: clearActive,
-          onRefresh: () => {
+          onRefresh: (self) => {
             startX = measureRequiredX(0);
             endX = measureRequiredX(cards.length - 1);
-            gsap.set(wrapper, { x: startX });
+            // Reposition for the CURRENT scroll progress, not always the first card.
+            // onUpdate only runs on a scroll delta, so after a refresh with no delta
+            // (e.g. closing a project overlay, or a resize) it may never fire —
+            // writing startX here would freeze the carousel on card #1. self.progress
+            // already reflects the restored scroll, so this keeps the carousel put.
+            gsap.set(wrapper, { x: startX + (endX - startX) * self.progress });
           },
           onUpdate: (self) => {
             const p = self.progress;
@@ -1776,10 +1807,15 @@ function PortfolioApp() {
           onEnterBack: () => setIsMiniProjectsInView(true),
           onLeave: clearActive,
           onLeaveBack: clearActive,
-          onRefresh: () => {
+          onRefresh: (self) => {
             startX = measureRequiredX(0);
             endX = measureRequiredX(cards.length - 1);
-            gsap.set(wrapper, { x: startX });
+            // Reposition for the CURRENT scroll progress, not always the first card.
+            // onUpdate only runs on a scroll delta, so after a refresh with no delta
+            // (e.g. closing a project overlay, or a resize) it may never fire —
+            // writing startX here would freeze the carousel on card #1. self.progress
+            // already reflects the restored scroll, so this keeps the carousel put.
+            gsap.set(wrapper, { x: startX + (endX - startX) * self.progress });
           },
           onUpdate: (self) => {
             const p = self.progress;
@@ -1858,13 +1894,16 @@ function PortfolioApp() {
     if (secondLine) {
       // Reset to base position
       gsap.set(secondLine, { x: 0 });
+      // Desktop keeps the dramatic stagger; on touch/narrow the bigger headline
+      // wraps to several lines, so a 200px slide would push it off-screen — skip it.
+      const secondLineSlide = window.matchMedia('(max-width: 900px)').matches ? 0 : 200;
       ScrollTrigger.create({
         trigger: '.mini-projects-header',
         start: 'top 50%', // when header top hits mid viewport
         once: true,
         onEnter: () => {
           gsap.to(secondLine, {
-            x: 200, // slide right by 200px (2x distance)
+            x: secondLineSlide, // 200 on desktop, 0 on mobile
             duration: 0.8, // faster
             ease: 'power2.out' // smooth acceleration with soft ease-out
           });
@@ -2186,12 +2225,12 @@ function PortfolioApp() {
 
   // Custom cursor with magnetic trail - ONLY for homepage
   useEffect(() => {
-    // Touch devices have no pointer to follow: don't create the floating dot/ring/
-    // label at all. This is what eliminates the "square stays stuck after I tap
-    // out" bug — there is simply no trail on touch. CSS (body.touch-device) shows
-    // tap affordances on the elements instead.
-    if (window.matchMedia('(hover: none) and (pointer: coarse)').matches) {
+    // Touch/non-hover devices have no desktop pointer to follow: don't create the
+    // floating dot/ring/label at all. This also removes any stale cursor nodes
+    // left by a previous wide desktop render before a resize or route change.
+    if (!canUseHoverCursor()) {
       document.body.classList.add('touch-device');
+      document.querySelectorAll('.custom-cursor, .cursor-trail, .cursor-label').forEach((el) => el.remove());
       return () => document.body.classList.remove('touch-device');
     }
     let mouseX = window.innerWidth / 2;
@@ -2594,7 +2633,7 @@ function PortfolioApp() {
   // springs back on leave, so buttons/arrows feel alive without ever moving far
   // enough to disturb the layout (hard-capped at 9px).
   useEffect(() => {
-    if (window.matchMedia('(hover: none) and (pointer: coarse)').matches) return;
+    if (!canUseHoverCursor()) return;
     const SELECTOR = '.audio-control-button, .project-overlay-close, .about-title-line .arrow-close-widget, .hero-rotate-cue';
     const RADIUS = 80;     // px halo around an element where the pull begins
     const STRENGTH = 0.3;  // fraction of the cursor offset applied
@@ -3028,7 +3067,7 @@ function PortfolioApp() {
   // Handle project hover with viewport check
   const handleProjectHover = (projectId) => {
     // Don't allow hover when any overlay is open
-    if (anyOverlayOpen) {
+    if (!canUseHoverCursor() || anyOverlayOpen) {
       return;
     }
     
@@ -3113,7 +3152,7 @@ function PortfolioApp() {
   // Handle mini project hover with viewport check
   const handleMiniProjectHover = (projectId) => {
     // Don't allow hover when any overlay is open
-    if (anyOverlayOpen) {
+    if (!canUseHoverCursor() || anyOverlayOpen) {
       return;
     }
     
@@ -3212,6 +3251,8 @@ function PortfolioApp() {
 
   // Monitor mouse position to clear hover mode when cursor is not over projects or center area
   useEffect(() => {
+    if (!canUseHoverCursor()) return;
+
     let mouseMoveTimeout = null;
 
     const handleMouseMove = (e) => {
@@ -3299,6 +3340,8 @@ function PortfolioApp() {
 
   // Update cursor shape when audio state changes (if hovering)
   useEffect(() => {
+    if (!canUseHoverCursor()) return;
+
     const audioButton = document.querySelector('.audio-control-button');
     const trail = document.querySelector('.cursor-trail');
 
@@ -3505,22 +3548,25 @@ function PortfolioApp() {
           ...(hoveredProject && isMainProjectsInView ? { '--project-accent': getProjectColor(hoveredProject) } : {}),
         }}
       >
-        {hoveredProject && isMainProjectsInView && (
-          <div className="light-rays-wrapper">
-            <LightRays
-              raysOrigin="top-center"
-              raysColor={getProjectColor(hoveredProject)}
-              raysSpeed={3}
-              lightSpread={2}
-              rayLength={2}
-              followMouse={true}
-              mouseInfluence={1}
-              noiseAmount={0.1}
-              distortion={0.05}
-              className="project-light-rays"
-            />
-          </div>
-        )}
+        {/* Warm-mounted: stays in the tree so the WebGL context is built once
+            (LightRays' own IntersectionObserver still defers the build until the
+            section is on screen). `paused` gates rendering; the opacity class
+            toggles visibility instantly — identical look to mount-on-hover. */}
+        <div className={`light-rays-wrapper ${hoveredProject && isMainProjectsInView ? 'light-rays-active' : ''}`}>
+          <LightRays
+            raysOrigin="top-center"
+            raysColor={getProjectColor(hoveredProject)}
+            raysSpeed={3}
+            lightSpread={2}
+            rayLength={2}
+            followMouse={true}
+            mouseInfluence={1}
+            noiseAmount={0.1}
+            distortion={0.05}
+            paused={!(hoveredProject && isMainProjectsInView)}
+            className="project-light-rays"
+          />
+        </div>
         <div className="main-projects-header" style={debugMode ? { border: '2px solid blue' } : {}}>
           <h2 className="main-projects-title" style={debugMode ? { border: '2px solid green' } : {}}>MY WORK.</h2>
         </div>
@@ -3717,15 +3763,20 @@ function PortfolioApp() {
       <section className="mini-projects" style={debugMode ? { border: '2px solid purple' } : {}}>
         <div className="mini-projects-header">
           <h2 className="mini-projects-title">
-            THINGS I DO WHEN<br />
+            THINGS I DO WHEN<br />{' '}
             <span className="mini-projects-title-second-line">I CANT SIT STILL</span>
           </h2>
         </div>
         <div className="mini-projects-container">
           {/* Invisible viewport container - this is the black rectangle reference */}
           <div className={`mini-projects-viewport-container ${hoveredMiniProject && isMiniProjectsInView ? 'dark-mode' : ''}`}>
-            {hoveredMiniProject && isMiniProjectsInView && showMiniAurora && (
-              <div className="aurora-wrapper aurora-staggered">
+            {/* Warm-mounted while the mini-projects section is in view: builds
+                the WebGL context once on scroll-in (not at page load) so hover
+                no longer triggers a rebuild. `aurora-staggered` + `paused` are
+                toggled by the same condition as before, so the fade-in animation
+                and instant leave look identical. */}
+            {isMiniProjectsInView && (
+              <div className={`aurora-wrapper ${hoveredMiniProject && isMiniProjectsInView && showMiniAurora ? 'aurora-staggered' : ''}`}>
                 <Aurora
                   colorStops={[
                     getMiniProjectColor(hoveredMiniProject),
@@ -3735,6 +3786,7 @@ function PortfolioApp() {
                   blend={0.5}
                   amplitude={1.0}
                   speed={0.5}
+                  paused={!(hoveredMiniProject && isMiniProjectsInView && showMiniAurora)}
                 />
               </div>
             )}

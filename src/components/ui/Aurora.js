@@ -172,6 +172,10 @@ export default function Aurora(props) {
     let animateId = 0;
     const update = t => {
       animateId = requestAnimationFrame(update);
+      // Warm-mount: keep the RAF alive but skip the expensive shader render
+      // (and per-frame color parsing) while the aurora is hidden. It resumes
+      // instantly when `paused` flips to false — no WebGL context rebuild.
+      if (propsRef.current.paused) return;
       const { speed = 0.5 } = propsRef.current;
       program.uniforms.uTime.value = t * 0.01 * speed;
       program.uniforms.uAmplitude.value = propsRef.current.amplitude ?? 1.0;
@@ -195,7 +199,10 @@ export default function Aurora(props) {
       }
       gl.getExtension('WEBGL_lose_context')?.loseContext();
     };
-  }, [amplitude, colorStops, blend, speed]);
+    // Build the WebGL context exactly once. Every live prop (colorStops,
+    // amplitude, blend, speed, paused) is read from propsRef.current inside the
+    // render loop, so prop changes never tear down and rebuild the shader.
+  }, []);
 
   return <div ref={ctnDom} className="aurora-container" />;
 }
