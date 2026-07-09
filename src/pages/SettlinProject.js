@@ -118,7 +118,7 @@ const SettlinProject = () => {
           <div className="hero-badge">Project</div>
           <h1 className="hero-title">Settlin</h1>
           <p className="hero-subtitle">
-            The path from psychology to product management isn't linear, but it makes sense. At Settlin, I learned that good product decisions happen where human understanding, systems thinking, and data meet. What started as UI/UX design became something deeper: understanding how products actually function. This was my first exposure to a vast complicated system.
+            I came to Settlin from a psychology background, joined as a UI/UX designer, and gradually grew into product work. It was my first time working inside a large, complicated system, and most of what I know about how products get built started here.
           </p>
           <div className="hero-meta">
             <span className="meta-item">UI/UX Design</span>
@@ -133,10 +133,10 @@ const SettlinProject = () => {
           <h2 className="section-title">Fixing the Preferences Flow</h2>
           <div className="section-content">
             <p className="body-base">
-              When I joined Settlin, the preferences flow was a mess. Users were abandoning it because the original designer had created too many screens with complex ranking systems. Completion rates sat at 34%, and the business couldn't work with those numbers.
+              One of my first projects was the preferences flow, which users were abandoning partway through. The original version spread the process across too many screens and asked people to do complex ranking before they understood why.
             </p>
             <p className="body-base">
-              I used cognitive load theory to fix it. Working memory handles 7±2 pieces of information at once, so I restructured everything into 5 focused screens: preference categories, selection, ranking, exclusions, and confirmation. Progressive disclosure meant showing information when needed, not all at once. Completion rates stabilized at 71% over the next mock tests. The flow worked with how people think, not against it.
+              I restructured it into five focused steps: categories, selection, ranking, exclusions, and confirmation. I used progressive disclosure so each screen asked for one decision at a time. In our test runs, completion improved noticeably. The main change was reducing how much users had to hold in their head at any one point.
             </p>
           </div>
         </section>
@@ -152,13 +152,13 @@ const SettlinProject = () => {
         </div>
 
         <section className="content-section">
-          <h2 className="section-title">Building Systems That Scale</h2>
+          <h2 className="section-title">Building a Design System</h2>
           <div className="section-content">
             <p className="body-base">
-              Settlin had no design system. Every button looked different. Border radii changed randomly. Shadows appeared wherever. This cost us 3-4 extra days per feature because designers recreated components and developers wrote duplicate code.
+              Settlin didn't have a design system when I joined. Components were recreated for each feature, styles drifted between the consumer app, the internal dashboard, and the website, and developers ended up writing duplicate code.
             </p>
             <p className="body-base">
-              I implemented Atomic Design: start with basic elements (colors, fonts, buttons), combine them into components, build from there. We had three products (consumer app, internal dashboard, website) and the design system meant one change updated everything. Feature development time dropped massively. I documented 247 components with usage guidelines so the system would survive without me. Good infrastructure gets out of the way and lets people build.
+              I introduced an atomic design structure, starting with base tokens like color and type and building reusable components from them. I documented the library with usage guidelines so it would hold up after I left. It made feature work faster and kept all three products visually consistent.
             </p>
           </div>
         </section>
@@ -177,10 +177,10 @@ const SettlinProject = () => {
           <h2 className="section-title">From Design Opinions to Data</h2>
           <div className="section-content">
             <p className="body-base">
-              Design without data is just guessing. I set up Mixpanel to track completion rates, drop-offs, feature usage, and time-on-task across all user flows. The data revealed what intuition can't and allowed us to make better, more informed decisions.
+              I set up Mixpanel so we could see completion rates, drop-offs, and feature usage instead of debating from intuition. It didn't make decisions for us, but it made disagreements easier to settle and helped us catch problems earlier.
             </p>
             <p className="body-base">
-              I also applied psychology beyond aesthetics. Progress bars leverage the goal gradient effect, and adding them increases completion rates. Auto-collapsing accordions satisfy our need for closure and reduced support tickets about "where did my selections go". These aren't design trends, they're behavioral principles that work because they match how cognition functions.
+              My psychology background was useful here too. Small things like progress indicators, clearer state changes, and auto-collapsing accordions cut down on confusion and on support questions about where selections had gone.
             </p>
           </div>
         </section>
@@ -189,7 +189,7 @@ const SettlinProject = () => {
           <h2 className="section-title">Learning the Whole Stack</h2>
           <div className="section-content">
             <p className="body-base">
-              I learned Flutter and React to stop being a liability in planning. When you understand implementation, you make better decisions. You estimate honestly, design within constraints, communicate clearly with engineers. I pushed multiple commits to the mobile app and to the dashboard over 8 months. When our Flutter lead left, I sat for sprints, took KT and picked up development work and shipped major screens to keep momentum. The best product decisions happen when you understand the whole stack.
+              I picked up Flutter and React mostly so I could plan honestly, because it is hard to scope work you don't understand. Over time I contributed commits to both the mobile app and the dashboard. When our Flutter lead left, I helped cover part of the gap. I sat in on the handover, picked up development tickets, and shipped screens while the team rebuilt capacity. I wasn't replacing an engineer, but understanding the stack made me more useful in planning and in conversations with the team.
             </p>
           </div>
         </section>
@@ -207,7 +207,7 @@ const SettlinProject = () => {
         <section className="content-section">
           <div className="section-content">
             <p className="body-base">
-              I ran workshops teaching designers about front-end development, design tokens, and atomic design workflows. Knowledge hoarding feels like job security but limits your career. The people who advance make everyone around them better. After the workshops, design-to-development handoff time dropped to same-day implementation for the majority of components.
+              I also ran a few internal workshops for the design team on front-end basics, design tokens, and the atomic design workflow. Handoffs got smoother afterwards. There were fewer back-and-forths about spacing and states, and more components went from design to build without needing a meeting.
             </p>
           </div>
         </section>
@@ -216,25 +216,25 @@ const SettlinProject = () => {
           <h2 className="section-title">Alignment, Documentation, and Storytelling</h2>
           <div className="section-content">
             <p className="body-base">
-              Product work is making sure everyone builds the same thing. I met with the CEO, CTO, and product managers weekly, translating between business needs, technical constraints, and user reality. I wrote multiple PRDs over 9 months that turned vague strategy into actual plans.
+              A lot of the job was alignment. I met weekly with the CEO, CTO, and product managers, translating between business goals, technical constraints, and what users were actually doing. I wrote PRDs that turned vague direction into concrete plans.
             </p>
             <p className="body-base">
-              I also designed the pitch deck and supporting graphic marketing assets. This meant understanding the business deeply enough to visualize it. Creating investor materials teaches you which metrics actually matter and how to connect product decisions to business outcomes. The deck went through multiple revisions, and designing it forced clarity about what we were actually building and why it mattered.
+              I also designed the investor pitch deck and supporting marketing assets, which meant understanding the business well enough to explain it in a few slides.
             </p>
             <p className="body-base">
-              Good documentation is security. When people leave or priorities shift, you don't lose context. Your decisions outlive your memory of creating them.
+              I documented decisions as we went, which paid off whenever priorities shifted or someone left.
             </p>
           </div>
         </section>
 
         <section className="content-section">
-          <h2 className="section-title">What Actually Matters</h2>
+          <h2 className="section-title">What I Took Away</h2>
           <div className="section-content">
             <p className="body-base">
-              The real takeaway was learning to connect the dots. Psychology helped me understand users. Design framed the problems. Tech let me build solutions. Data checked if they worked. Product thinking tied it all to real outcomes.
+              The real value of Settlin was learning to connect disciplines. Psychology helped me understand users, design gave me a way to frame problems, code let me build and estimate honestly, and data told us whether any of it worked.
             </p>
             <p className="body-base">
-              Every piece compounded: the design system sped up features and cut bugs. Analytics made decisions hypothesis-driven. Documentation saved time later. Workshops paid off as the team used what they learned.
+              None of those skills mattered much in isolation. The useful part was moving between them.
             </p>
           </div>
         </section>
