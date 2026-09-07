@@ -1059,6 +1059,48 @@ function PortfolioApp() {
     const loadingBar = loadingBarRef.current;
     const video = videoRef.current;
 
+    // The loader must never lift before the hero video has decoded its first
+    // frame, otherwise the reveal lands on an empty black box. The bar animation
+    // and the video's readiness are tracked separately; the loader only goes
+    // away once both are done (or the emergency fallback fires).
+    let loaderFinished = false;
+    let onVideoReady = null;
+    let fallbackTimeoutId = null;
+    let emergencyTimeoutId = null;
+
+    const finishLoading = (reason) => {
+      if (loaderFinished) return;
+      loaderFinished = true;
+      debugLog('Hiding loader:', reason);
+      setLoaderComplete(true);
+      if (loader) {
+        loader.style.display = 'none';
+        debugLog('Loader hidden');
+      }
+      video?.play().catch((e) => {
+        debugLog('Video play error:', e);
+      });
+
+      // Re-enable scrolling after loader finishes
+      document.body.style.overflow = 'auto';
+      window.__lenis?.start();
+      debugLog('Scrolling re-enabled');
+    };
+
+    // readyState >= HAVE_CURRENT_DATA (2) is the point where there is a frame to paint.
+    const finishWhenVideoReady = (reason) => {
+      if (!video || video.readyState >= 2) {
+        finishLoading(reason);
+        return;
+      }
+      debugLog('Bar complete, holding loader until video first frame');
+      onVideoReady = () => finishLoading(`${reason} + video first frame`);
+      // A stalled or broken video must not strand the visitor on the loader,
+      // so an error resolves the wait too (the emergency timeout still caps it).
+      video.addEventListener('loadeddata', onVideoReady);
+      video.addEventListener('error', onVideoReady);
+    };
+
     // Animate loading bar smoothly over 2 seconds
     if (loadingBar) {
       gsap.fromTo(loadingBar,
@@ -1068,53 +1110,25 @@ function PortfolioApp() {
           duration: 2,
           ease: "power2.out",
           onComplete: () => {
-            debugLog('Loader animation complete, hiding loader');
-            setLoaderComplete(true);
-            if (loader) {
-              loader.style.display = 'none';
-              debugLog('Loader hidden');
-            }
-            video?.play().catch((e) => {
-              debugLog('Video play error:', e);
-            });
-
-            // Re-enable scrolling after loader finishes
-            document.body.style.overflow = 'auto';
-            window.__lenis?.start();
-            debugLog('Scrolling re-enabled');
+            debugLog('Loader animation complete');
+            finishWhenVideoReady('loader animation complete');
           }
         }
       );
     } else {
       // Fallback: hide loader immediately if loadingBar is not found
       debugLog('LoadingBar not found, using fallback');
-      setTimeout(() => {
-        debugLog('Fallback: hiding loader');
-        setLoaderComplete(true);
-        if (loader) {
-          loader.style.display = 'none';
-          debugLog('Loader hidden via fallback');
-        }
-        video?.play().catch((e) => {
-          debugLog('Video play error (fallback):', e);
-        });
-        document.body.style.overflow = 'auto';
-        window.__lenis?.start();
-        debugLog('Scrolling re-enabled (fallback)');
+      fallbackTimeoutId = setTimeout(() => {
+        finishWhenVideoReady('loading bar missing');
       }, 100);
     }
 
-    // Emergency fallback: Force hide loader after 5 seconds regardless
-    setTimeout(() => {
-      debugLog('Emergency fallback: Force hiding loader');
-      setLoaderComplete(true);
-      if (loader) {
-        loader.style.display = 'none';
-        debugLog('Loader force-hidden');
-      }
-      document.body.style.overflow = 'auto';
-      window.__lenis?.start();
-    }, 5000);
+    // Emergency fallback: force hide the loader regardless of video readiness.
+    // Generous enough that a slow connection still gets its first frame, but
+    // short of leaving anyone stuck on the loading screen indefinitely.
+    emergencyTimeoutId = setTimeout(() => {
+      finishLoading('emergency fallback');
+    }, 10000);
 
     // Additional scroll reset after a short delay to ensure it takes effect
     setTimeout(() => {
@@ -2116,6 +2130,14 @@ function PortfolioApp() {
       // Remove event listeners
       if (handleBeforeUnload) {
         window.removeEventListener('beforeunload', handleBeforeUnload);
+      }
+
+      // Tear down the loader's pending timers and video-readiness listeners
+      if (fallbackTimeoutId) clearTimeout(fallbackTimeoutId);
+      if (emergencyTimeoutId) clearTimeout(emergencyTimeoutId);
+      if (video && onVideoReady) {
+        video.removeEventListener('loadeddata', onVideoReady);
+        video.removeEventListener('error', onVideoReady);
       }
 
       // Re-enable scrolling on cleanup
@@ -3404,7 +3426,7 @@ function PortfolioApp() {
       {/* Pinned hero that transitions, then releases to normal scroll */}
       <section className="hero" style={debugMode ? { border: '2px solid red' } : {}}>
         <div className="video-container" ref={videoContainerRef} style={{ position: 'relative', ...(debugMode ? { border: '2px solid blue' } : {}) }}>
-          <video ref={videoRef} src="https://cdn.pratiksinghal.in/Final%20Preview.mp4" autoPlay muted={isMuted} playsInline loop preload="metadata" style={{ height: '100%', width: '100%', objectFit: 'cover', ...(debugMode ? { border: '2px solid green' } : {}) }} />
+          <video ref={videoRef} src="https://cdn.pratiksinghal.in/Final%20Preview%20from%20Cloudflare.mp4" autoPlay muted={isMuted} playsInline loop preload="auto" style={{ height: '100%', width: '100%', objectFit: 'cover', ...(debugMode ? { border: '2px solid green' } : {}) }} />
 
           <button
             onClick={() => {
