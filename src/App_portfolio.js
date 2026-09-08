@@ -3426,7 +3426,7 @@ function PortfolioApp() {
       {/* Pinned hero that transitions, then releases to normal scroll */}
       <section className="hero" style={debugMode ? { border: '2px solid red' } : {}}>
         <div className="video-container" ref={videoContainerRef} style={{ position: 'relative', ...(debugMode ? { border: '2px solid blue' } : {}) }}>
-          <video ref={videoRef} src="https://cdn.pratiksinghal.in/Final%20Preview%20from%20Cloudflare.mp4" autoPlay muted={isMuted} playsInline loop preload="auto" style={{ height: '100%', width: '100%', objectFit: 'cover', ...(debugMode ? { border: '2px solid green' } : {}) }} />
+          <video ref={videoRef} src="https://cdn.pratiksinghal.in/Main%20Video.mp4" autoPlay muted={isMuted} playsInline loop preload="auto" style={{ height: '100%', width: '100%', objectFit: 'cover', ...(debugMode ? { border: '2px solid green' } : {}) }} />
 
           <button
             onClick={() => {
