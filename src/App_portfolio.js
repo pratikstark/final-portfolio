@@ -38,6 +38,19 @@ const canUseHoverCursor = () =>
 // treatment (no desktop pin/shrink) and other touch-appropriate behaviour.
 const isTouchOrNarrow = () => !canUseHoverCursor();
 
+// Fullscreen calls reject asynchronously when the browser wants a real user
+// gesture first, and a try/catch never sees that — it escapes as an unhandled
+// rejection ("Permissions check failed"). Entering/leaving fullscreen here is
+// always best-effort, so swallow the sync throw and the rejected promise alike.
+// iOS's webkitEnterFullscreen returns undefined, hence the duck-typed check.
+const tryFullscreen = (fn, ctx) => {
+  if (typeof fn !== 'function') return;
+  try {
+    const result = fn.call(ctx);
+    if (result && typeof result.catch === 'function') result.catch(() => {});
+  } catch (e) { /* fullscreen may be blocked */ }
+};
+
 // Store original console methods
 
 // Debug logger - only logs when debug mode is enabled
@@ -676,7 +689,7 @@ function PortfolioApp() {
     v.play().catch(() => {});
     const req = v.requestFullscreen || v.webkitEnterFullscreen ||
                 v.webkitRequestFullscreen || v.msRequestFullscreen;
-    try { if (req) req.call(v); } catch (e) { /* fullscreen may be blocked */ }
+    tryFullscreen(req, v);
   };
 
   // Rotating a phone into landscape is the immersive moment: auto-attempt native
@@ -694,22 +707,20 @@ function PortfolioApp() {
       v.play().catch(() => {});
       const req = v.requestFullscreen || v.webkitEnterFullscreen ||
                   v.webkitRequestFullscreen || v.msRequestFullscreen;
-      try { if (req) req.call(v); } catch (e) { /* gesture may be required */ }
+      tryFullscreen(req, v);
     };
     const exitImmersive = () => {
       const v = videoRef.current;
       // iOS plays video fullscreen on the ELEMENT (not the document), so it has to
       // be closed on the element — do this first so rotating back exits cleanly.
       if (v && v.webkitDisplayingFullscreen && typeof v.webkitExitFullscreen === 'function') {
-        try { v.webkitExitFullscreen(); } catch (e) { /* ignore */ }
+        tryFullscreen(v.webkitExitFullscreen, v);
       }
       // Standard / webkit document fullscreen.
       const ex = document.exitFullscreen || document.webkitExitFullscreen;
-      try {
-        if (ex && (document.fullscreenElement || document.webkitFullscreenElement)) {
-          ex.call(document);
-        }
-      } catch (e) { /* ignore */ }
+      if (document.fullscreenElement || document.webkitFullscreenElement) {
+        tryFullscreen(ex, document);
+      }
       // Back in portrait we're the quiet letterbox again — re-mute so nothing keeps
       // playing sound behind the scroll, and the Unmute control re-appears.
       if (v) v.muted = true;
